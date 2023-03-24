@@ -1,5 +1,5 @@
 {
-	"name": "raw",
+	"name": "bronze_ref",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "lsadlshackathon",
@@ -9,9 +9,7 @@
 		"type": "Json",
 		"typeProperties": {
 			"location": {
-				"type": "AzureBlobFSLocation",
-				"folderPath": "30tb",
-				"fileSystem": "raw"
+				"type": "AzureBlobFSLocation"
 			}
 		},
 		"schema": {}
