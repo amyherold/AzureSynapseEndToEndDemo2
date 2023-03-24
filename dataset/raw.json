@@ -5,11 +5,6 @@
 			"referenceName": "lsadlshackathon",
 			"type": "LinkedServiceReference"
 		},
-		"parameters": {
-			"subfolder": {
-				"type": "string"
-			}
-		},
 		"annotations": [],
 		"type": "Json",
 		"typeProperties": {
