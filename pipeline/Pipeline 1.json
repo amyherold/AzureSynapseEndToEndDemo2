@@ -19,7 +19,7 @@
 						"type": "BinarySource",
 						"storeSettings": {
 							"type": "AzureBlobFSReadSettings",
-							"recursive": false,
+							"recursive": true,
 							"wildcardFolderPath": "*",
 							"wildcardFileName": "Patient.ndjson",
 							"deleteFilesAfterCompletion": false
