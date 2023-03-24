@@ -1,0 +1,100 @@
+{
+	"name": "Notebook 1",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "fhirspark",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "56g",
+			"driverCores": 8,
+			"executorMemory": "56g",
+			"executorCores": 8,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "d449fe1f-a873-4add-87c3-770ba9523da4"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/1edafb84-8c33-41e9-aa81-994d9cdc325c/resourceGroups/amherold_hackathon/providers/Microsoft.Synapse/workspaces/ws-amherold-hackathon/bigDataPools/fhirspark",
+				"name": "fhirspark",
+				"type": "Spark",
+				"endpoint": "https://ws-amherold-hackathon.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/fhirspark",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.1",
+				"nodeCount": 5,
+				"cores": 8,
+				"memory": 56,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"# Import required libraries \r\n",
+					"from pyspark.sql import SparkSession\r\n",
+					"import os\r\n",
+					"import shutil\r\n",
+					"\r\n",
+					"# Define the storage account and file system names\r\n",
+					"storage_account_name = \"amheroldhackathonstorage\"\r\n",
+					"file_system_name = \"raw/30tb/\"\r\n",
+					"\r\n",
+					"# Define the root path to the Observation.ndjson files\r\n",
+					"root_path = \"abfss://{0}.dfs.core.windows.net/{1}/\".format(storage_account_name, file_system_name)\r\n",
+					"root_path\r\n",
+					"\r\n",
+					"# Define the path to the destination folder where the files will be copied\r\n",
+					"destination_path = \"abfss://{0}.dfs.core.windows.net/bronze/historic_data/Observation/\".format(storage_account_name)\r\n",
+					"\r\n",
+					"# Create a Spark session\r\n",
+					"spark = SparkSession.builder.appName(\"CopyObservations\").getOrCreate()\r\n",
+					"\r\n",
+					"\r\n",
+					"# Loop through each file in the root folder \r\n",
+					"for file in spark.read.text(root_path).rdd.map(lambda r: r[0]).collect(): # Get the relative folder structure by removing the parent folder path relative_folder_path = os.path.dirname(file) # Get the filename filename = os.path.basename(file) # Check if the file is Observation.ndjson and read the first line if filename == \"Observation.ndjson\": file_path = os.path.join(root_path, file) with open(file_path, \"r\") as f: first_line = f.readline() # Check if the first line contains the issued date and if it is between 2016 and 2020 if \"\\\"issued\\\":\\\"\" in first_line: issued_year = first_line.split(\"\\\"issued\\\":\\\"\")[1][:4] if issued_year.isdigit() and 2016 <= int(issued_year) <= 2020: # Create the destination folder path with year partition and copy the file while preserving the folder structure year_partition_path = os.path.join(destination_path, relative_folder_path, \"year=\" + issued_year) os.makedirs(year_partition_path, exist_ok=True) shutil.copy2(file_path, os.path.join(year_partition_path, filename))\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"# # Loop through each file in the root folder\r\n",
+					"# for file in spark.read.text(root_path).rdd.map(lambda r: r[0]).collect():\r\n",
+					"#     file_path = os.path.join(root_path, file)\r\n",
+					"#     # Check if the file is Observation.ndjson and read the first line\r\n",
+					"#     if file == \"Observation.ndjson\":\r\n",
+					"#         with open(file_path, \"r\") as f:\r\n",
+					"#             first_line = f.readline()\r\n",
+					"#             # Check if the first line contains the issued date and if it is between 2016 and 2020\r\n",
+					"#             if \"\\\"issued\\\":\\\"\" in first_line:\r\n",
+					"#                 issued_year = first_line.split(\"\\\"issued\\\":\\\"\")[1][:4]\r\n",
+					"#                 if issued_year.isdigit() and 2016 <= int(issued_year) <= 2020:\r\n",
+					"#                     # Create the destination folder path with year partition and copy the file while preserving the folder structure\r\n",
+					"#                     year_partition_path = os.path.join(destination_path, \"year=\" + issued_year)\r\n",
+					"#                     os.makedirs(year_partition_path, exist_ok=True)\r\n",
+					"#                     shutil.copy2(file_path, os.path.join(year_partition_path, file))\r\n",
+					""
+				],
+				"execution_count": 19
+			}
+		]
+	}
+}
