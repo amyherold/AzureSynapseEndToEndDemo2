@@ -20,7 +20,7 @@
 						"storeSettings": {
 							"type": "AzureBlobFSReadSettings",
 							"recursive": true,
-							"wildcardFolderPath": "*",
+							"wildcardFolderPath": "30tb",
 							"wildcardFileName": "Patient.ndjson",
 							"deleteFilesAfterCompletion": false
 						},
@@ -32,7 +32,7 @@
 						"type": "BinarySink",
 						"storeSettings": {
 							"type": "AzureBlobFSWriteSettings",
-							"copyBehavior": "FlattenHierarchy"
+							"copyBehavior": "PreserveHierarchy"
 						}
 					},
 					"enableStaging": false
