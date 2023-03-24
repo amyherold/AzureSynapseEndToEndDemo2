@@ -1,0 +1,16 @@
+{
+	"name": "raw_binary",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "lsadlshackathon",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation"
+			}
+		}
+	}
+}
