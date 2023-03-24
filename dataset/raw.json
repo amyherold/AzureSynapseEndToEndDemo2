@@ -5,12 +5,16 @@
 			"referenceName": "lsadlshackathon",
 			"type": "LinkedServiceReference"
 		},
+		"parameters": {
+			"subfolder": {
+				"type": "string"
+			}
+		},
 		"annotations": [],
 		"type": "Json",
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
-				"folderPath": "30tb",
 				"fileSystem": "raw"
 			}
 		},
