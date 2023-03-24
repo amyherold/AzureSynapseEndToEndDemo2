@@ -19,8 +19,8 @@
 						"type": "BinarySource",
 						"storeSettings": {
 							"type": "AzureBlobFSReadSettings",
-							"recursive": true,
-							"wildcardFolderPath": "30tb",
+							"recursive": false,
+							"wildcardFolderPath": "*",
 							"wildcardFileName": "Patient.ndjson",
 							"deleteFilesAfterCompletion": false
 						},
