@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "1cc8595c-9078-466d-ad7c-0792caafdc06"
+				"spark.autotune.trackingId": "a7f6116a-131a-4cfa-b3cd-1ea190790505"
 			}
 		},
 		"metadata": {
@@ -474,6 +474,51 @@
 					""
 				],
 				"execution_count": 38
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Patient_extension_explode_df = Patient_df.select(\"id\",explode(Patient_df.extension))\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Patient_extension_df= Patient_extension_explode_df.toDF(*( \"id\",\"extension\"))\r\n",
+					"\r\n",
+					"Patient_extension_df = Patient_extension_df.select(\"id\"\r\n",
+					",\"extension.url\"  \r\n",
+					",\"extension.valueAddress.city\"\r\n",
+					",\"extension.valueAddress.country\"\r\n",
+					",\"extension.valueAddress.state\" \r\n",
+					",\"extension.valueDecimal\"   \r\n",
+					",\"extension.valueString\"\r\n",
+					").toDF(*(\"Patient_id\"    \r\n",
+					",\"extension_url\"  \r\n",
+					",\"extension_valueAddress_city\"\r\n",
+					",\"extension_valueAddress_country\"\r\n",
+					",\"extension_valueAddress_state\" \r\n",
+					",\"extension_valueDecimal\"   \r\n",
+					",\"extension_valueString\"\r\n",
+					"))\r\n",
+					"\r\n",
+					"display(Patient_extension_df.limit(10))\r\n",
+					"\r\n",
+					"Patient_extension_df.write.mode(write_mode).parquet(silver_location+\"Patient_extension/\") "
+				],
+				"execution_count": 41
 			}
 		]
 	}
