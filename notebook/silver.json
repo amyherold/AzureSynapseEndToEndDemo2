@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "6b51199b-95f0-490a-9ae7-a38a312f67a4"
+				"spark.autotune.trackingId": "d3eae646-333e-4fc0-82a3-198b70510050"
 			}
 		},
 		"metadata": {
@@ -70,9 +70,11 @@
 					}
 				},
 				"source": [
-					""
+					"bronze_location = \"abfss://bronze@\" + StorageName + \".dfs.core.windows.net/historic_data/observation/year=*/*/\"\r\n",
+					"silver_location = \"abfss://silver@\" + StorageName + \".dfs.core.windows.net/\"\r\n",
+					"write_mode=\"overwrite\""
 				],
-				"execution_count": null
+				"execution_count": 2
 			}
 		]
 	}
