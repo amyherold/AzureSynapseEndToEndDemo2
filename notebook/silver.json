@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "b6b23d24-9c7a-461e-b807-86089a171b84"
+				"spark.autotune.trackingId": "530c64e3-dbc4-4eb1-b5b0-0ea2922a76ba"
 			}
 		},
 		"metadata": {
@@ -93,6 +93,53 @@
 					"Observation_df=spark.read.json(bronze_location)"
 				],
 				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Observation_df=Observation_df.withColumn(\"subject\",regexp_replace(\"subject.reference\",\"Patient/\",\"\")).withColumn(\"encounter\",regexp_replace(\"encounter.reference\",\"Encounter/\",\"\"))\r\n",
+					"#Observation_df=Observation_df.withColumnRenamed(\"id\",\"Observation_id\")\r\n",
+					"Observation_df=Observation_df.withColumnRenamed(\"subject\",\"patient_id_reference\")\r\n",
+					"Observation_df=Observation_df.withColumnRenamed(\"encounter\",\"encounter_id_reference\")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"\r\n",
+					"Observation_valueCodeableConcept_explode_df = Observation_df.select(\"id\",explode(Observation_df.valueCodeableConcept.coding),\"valueCodeableConcept.text\").toDF(*(\"id\",\"coding\",\"valueCodeableConcept_text\"))\r\n",
+					"\r\n",
+					"Observation_valueCodeableConcept_df = Observation_valueCodeableConcept_explode_df.select(\"id\",\"coding.*\",\"valueCodeableConcept_text\").toDF(*(\"id\",\"valueCodeableConcept_code\", \"valueCodeableConcept_display\",\"valueCodeableConcept_system\",\"valueCodeableConcept_text\"))\r\n",
+					"\r\n",
+					"Observation_category_df.write.mode(write_mode).parquet(silver_location+\"Observation_valueCodeableConcept/\")\t"
+				],
+				"execution_count": null
 			}
 		]
 	}
