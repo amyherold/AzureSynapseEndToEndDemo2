@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "e4d03fc5-dcd4-44e7-bde9-dd401afe1fec"
+				"spark.autotune.trackingId": "6f397a5c-9d2d-4996-8742-da6e13721760"
 			}
 		},
 		"metadata": {
@@ -54,7 +54,7 @@
 					"StorageName = \"amheroldhackathonstorage\"\r\n",
 					"DatasetSize = \"30tb\""
 				],
-				"execution_count": 3
+				"execution_count": 4
 			},
 			{
 				"cell_type": "code",
