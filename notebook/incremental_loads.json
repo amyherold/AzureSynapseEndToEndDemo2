@@ -1,0 +1,238 @@
+{
+	"name": "incremental_loads",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "fhirspark",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "56g",
+			"driverCores": 8,
+			"executorMemory": "56g",
+			"executorCores": 8,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "e4fc520a-ea51-4155-91ca-61e525a3722b"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/1edafb84-8c33-41e9-aa81-994d9cdc325c/resourceGroups/amherold_hackathon/providers/Microsoft.Synapse/workspaces/ws-amherold-hackathon/bigDataPools/fhirspark",
+				"name": "fhirspark",
+				"type": "Spark",
+				"endpoint": "https://ws-amherold-hackathon.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/fhirspark",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.1",
+				"nodeCount": 5,
+				"cores": 8,
+				"memory": 56,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"StorageName = \"amheroldhackathonstorage\"\r\n",
+					"DatasetSize = \"30tb\""
+				],
+				"execution_count": 1
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"bronze_location = \"abfss://bronze@\" + StorageName + \".dfs.core.windows.net/incremental_data/observation/year=2021/month=*/day=*\"\r\n",
+					"silver_location = \"abfss://silver@\" + StorageName + \".dfs.core.windows.net/\"\r\n",
+					"write_mode=\"overwrite\""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"df = spark.read.load('abfss://rawsilver@synapseinaday.dfs.core.windows.net/Dimension/Customer/', format='parquet')\r\n",
+					"\r\n",
+					"df.write.format(\"delta\").save(\"/delta/CustomerDimension\")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#-----------rename columns------------------\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Observation_df=Observation_df.withColumn(\"subject\",regexp_replace(\"subject.reference\",\"Patient/\",\"\")).withColumn(\"encounter\",regexp_replace(\"encounter.reference\",\"Encounter/\",\"\"))\r\n",
+					"Observation_df=Observation_df.withColumnRenamed(\"id\",\"Observation_id\")\r\n",
+					"Observation_df=Observation_df.withColumnRenamed(\"subject\",\"patient_id_reference\")\r\n",
+					"Observation_df=Observation_df.withColumnRenamed(\"encounter\",\"encounter_id_reference\")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"\r\n",
+					"Observation_main_df = Observation_df.select(\r\n",
+					"    \"Observation_id\",\"resourceType\",\"issued\",\"status\", \"patient_id_reference\",\"encounter_id_reference\",\"effectiveDateTime\",\r\n",
+					"    \"valueQuantity.code\",\"valueQuantity.system\",\"valueQuantity.unit\",\"valueQuantity.value\",\"valueString\").toDF(*(\r\n",
+					"    \"Observation_id\",\"resourceType\",\"issued\",\"status\",\"patient_id_reference\",\"encounter_id_reference\",\"effectiveDateTime\",\r\n",
+					"    \"valueQuantity_code\",\"valueQuantity_system\",\r\n",
+					"    \"valueQuantity_unit\",\"valueQuantity_value\",\"valueString\"))"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Claim_procedure_explode_df = Claim_df.select(\"id\",explode(Claim_df.procedure))\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Claim_procedure_df= Claim_procedure_explode_df.toDF(*( \"id\",\"procedure\"))\r\n",
+					"\r\n",
+					"Claim_procedure_df = Claim_procedure_df.select(\"id\",\"procedure.procedureReference.reference\",\"procedure.sequence\").toDF(*(\"Claim_id\",\"procedure_reference\",\"procedure_sequence\"))\r\n",
+					"\r\n",
+					"Claim_procedure_df=Claim_procedure_df.withColumn(\"procedure_reference\",regexp_replace(\"procedure_reference\",\"Procedure/\",\"\"))\r\n",
+					"\r\n",
+					"Claim_procedure_df.write.mode(write_mode).parquet(silver_location+\"Claim_procedure/\") "
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"display(Claim_procedure_df.limit(10))"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Claim_procedure_df.write.mode(write_mode).parquet(curated_location+\"Claim_procedure/\")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					""
+				],
+				"execution_count": null
+			}
+		]
+	}
+}
