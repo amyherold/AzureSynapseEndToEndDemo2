@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "f7e96f51-2c7e-4644-a524-6477a7e88c74"
+				"spark.autotune.trackingId": "1cc8595c-9078-466d-ad7c-0792caafdc06"
 			}
 		},
 		"metadata": {
@@ -70,11 +70,12 @@
 					}
 				},
 				"source": [
-					"bronze_location = \"abfss://bronze@\" + StorageName + \".dfs.core.windows.net/historic_data/observation/year=*/*/\"\r\n",
+					"#bronze_location = \"abfss://bronze@\" + StorageName + \".dfs.core.windows.net/historic_data/claim/year=*/*/\"\r\n",
+					"bronze_location = \"abfss://bronze@\" + StorageName + \".dfs.core.windows.net/reference_data/Patient/\"\r\n",
 					"silver_location = \"abfss://silver@\" + StorageName + \".dfs.core.windows.net/\"\r\n",
 					"write_mode=\"overwrite\""
 				],
-				"execution_count": 6
+				"execution_count": 19
 			},
 			{
 				"cell_type": "code",
@@ -164,6 +165,315 @@
 					"Observation_code_df.write.mode(write_mode).parquet(silver_location+\"Observation_code/\")"
 				],
 				"execution_count": 11
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Claim_df=spark.read.json(bronze_location)"
+				],
+				"execution_count": 13
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Claim_df.printSchema()"
+				],
+				"execution_count": 14
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Claim_main_explode_df = Claim_df.select(\r\n",
+					"    \"id\",\"resourceType\",\"status\",\"billablePeriod.end\",\"billablePeriod.start\",\"created\",\"patient.display\",\"patient.reference\",\r\n",
+					"    \"prescription.reference\",\"provider.display\",\"provider.reference\",\"total.currency\",\"total.value\",\"use\")\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Claim_main_df= Claim_main_explode_df.toDF(*( \r\n",
+					"    \"Claim_id\",\"resourceType\",\"status\",\"billablePeriod_end\",\"billablePeriod_start\",\"created\",\r\n",
+					"    \"patient_display\",\"patient_id_reference\",\r\n",
+					"    \"prescription_reference\",\"provider_display\",\"provider_org_id_reference\",\"total_currency\",\"total_value\",\"use\"))\r\n",
+					"\r\n",
+					"Claim_main_df = Claim_main_df.withColumn(\"patient_id_reference\",regexp_replace(\"patient_id_reference\",\"Patient/\",\"\")).withColumn(\r\n",
+					"    \"provider_org_id_reference\",regexp_replace(\"provider_org_id_reference\",\"Organization/\",\"\"))\r\n",
+					"\r\n",
+					"Claim_main_df.write.mode(write_mode).parquet(silver_location+\"Claim_main/\")    "
+				],
+				"execution_count": 15
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"\r\n",
+					"Claim_insurance_explode_df = Claim_df.select(\"id\", explode(Claim_df.insurance))\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Claim_insurance_df= Claim_insurance_explode_df.toDF(*( \"Claim_id\",\"insurance\"))\r\n",
+					"\r\n",
+					"Claim_insurance_df = Claim_insurance_df.select(\"Claim_id\",\"insurance.coverage.display\",\"insurance.focal\",\"insurance.sequence\" ).toDF(*(\"Claim_id\",\"insurance_coverage.display\",\"insurance_focal\",\"insurance_sequence\" ))\r\n",
+					"\r\n",
+					"Claim_insurance_df.write.mode(write_mode).parquet(silver_location+\"Claim_insurance/\")   "
+				],
+				"execution_count": 16
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Claim_diagnosis_explode_df = Claim_df.select(\"id\",  explode(Claim_df.diagnosis))\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Claim_diagnosis_df= Claim_diagnosis_explode_df.toDF(*( \"id\", \"diagnosis\"))\r\n",
+					"\r\n",
+					"Claim_diagnosis_df = Claim_diagnosis_df.select(\"id\",\"diagnosis.diagnosisReference.reference\",\"diagnosis.sequence\").toDF(*( \"Claim_id\",\"diagnosis_reference\",\"diagnosis_sequence\"))\r\n",
+					"\r\n",
+					"Claim_diagnosis_df=Claim_diagnosis_df.withColumn(\"diagnosis_reference\",regexp_replace(\"diagnosis_reference\",\"Condition/\",\"\"))  \r\n",
+					"\r\n",
+					"Claim_diagnosis_df.write.mode(write_mode).parquet(silver_location+\"Claim_diagnosis/\") "
+				],
+				"execution_count": 17
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Claim_procedure_explode_df = Claim_df.select(\"id\",explode(Claim_df.procedure))\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Claim_procedure_df= Claim_procedure_explode_df.toDF(*( \"id\",\"procedure\"))\r\n",
+					"\r\n",
+					"Claim_procedure_df = Claim_procedure_df.select(\"id\",\"procedure.procedureReference.reference\",\"procedure.sequence\").toDF(*(\"Claim_id\",\"procedure_reference\",\"procedure_sequence\"))\r\n",
+					"\r\n",
+					"Claim_procedure_df=Claim_procedure_df.withColumn(\"procedure_reference\",regexp_replace(\"procedure_reference\",\"Procedure/\",\"\"))\r\n",
+					"\r\n",
+					"Claim_procedure_df.write.mode(write_mode).parquet(silver_location+\"Claim_procedure/\") "
+				],
+				"execution_count": 18
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Patient_df=spark.read.parquet(bronze_location)"
+				],
+				"execution_count": 21
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Patient_df.printSchema()"
+				],
+				"execution_count": 22
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Patient_address_explode_df = Patient_df.select(\"id\",explode(Patient_df.address))\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Patient_address_df= Patient_address_explode_df.toDF(*( \"id\",\"address\"))\r\n",
+					"\r\n",
+					"Patient_address_df = Patient_address_df.select(\"id\"\r\n",
+					",\"address.city\"\r\n",
+					",\"address.country\"\r\n",
+					",\"address.line\" \r\n",
+					",\"address.postalCode\"\r\n",
+					",\"address.state\"\r\n",
+					").toDF(*(\"Patient_id\"    \r\n",
+					",\"address_city\"\r\n",
+					",\"address_country\"\r\n",
+					",\"address_line\" \r\n",
+					",\"address_postalCode\"\r\n",
+					",\"address_state\"))\r\n",
+					"\r\n",
+					"\r\n",
+					"#Patient_address_df = Patient_address_df.withColumn(\"procedure_reference\",regexp_replace(\"procedure_reference\",\"Procedure/\",\"\"))\r\n",
+					"\r\n",
+					"# #use toDF() to rename the columns\r\n",
+					"# Patient_address_df= Patient_address_explode_df.toDF(*( \"id\"\r\n",
+					"# #,\"address\"\r\n",
+					"# ,\"address.city\"\r\n",
+					"# ,\"address.country\"\r\n",
+					"# #,\"address.url\"\r\n",
+					"# #,\"address.line\" \r\n",
+					"# #,\"address.postalCode\"\r\n",
+					"# #,\"address.state\"\r\n",
+					"# ))\r\n",
+					"\r\n",
+					"display(Patient_address_df.limit(10))\r\n",
+					"\r\n",
+					"# Patient_address_df = Patient_address_df.select(\"id\"\r\n",
+					"# ,\"address.city\"\r\n",
+					"# ,\"address.country\"\r\n",
+					"# ,\"address.line\" \r\n",
+					"# ,\"address.postalCode\"\r\n",
+					"# ,\"address.state\").toDF(*(\"Claim_id\",\"procedure_reference\",\"procedure_sequence\"))\r\n",
+					"\r\n",
+					"# display(Patient_address_df.limit(10))\r\n",
+					"\r\n",
+					"#Patient_address_df = Patient_address_df.select(\"id\",\"addressprocedure.procedureReference.reference\",\"procedure.sequence\").toDF(*(\"Claim_id\",\"procedure_reference\",\"procedure_sequence\"))\r\n",
+					"\r\n",
+					"#Patient_address_df = Patient_address_df.withColumn(\"procedure_reference\",regexp_replace(\"procedure_reference\",\"Procedure/\",\"\"))\r\n",
+					"\r\n",
+					"Patient_address_df.write.mode(write_mode).parquet(silver_location+\"Patient_address/\") \r\n",
+					""
+				],
+				"execution_count": 33
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Patient_identifier_explode_df = Patient_df.select(\"id\",explode(Patient_df.identifier))\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Patient_identifier_df= Patient_identifier_explode_df.toDF(*( \"id\",\"identifier\"))\r\n",
+					"\r\n",
+					"Patient_identifier_df = Patient_identifier_df.select(\"id\"\r\n",
+					",\"identifier.system\"  \r\n",
+					",\"identifier.type.coding.code\"\r\n",
+					",\"identifier.type.coding.display\"\r\n",
+					",\"identifier.type.coding.system\" \r\n",
+					",\"identifier.type.text\"   \r\n",
+					",\"identifier.value\"\r\n",
+					").toDF(*(\"Patient_id\"    \r\n",
+					",\"identifier_system\"  \r\n",
+					",\"identifier_type_code\"\r\n",
+					",\"identifier_type_code_display\"\r\n",
+					",\"identifier_type_code_system\" \r\n",
+					",\"identifier_type_text\"   \r\n",
+					",\"identifier_value\"\r\n",
+					"))\r\n",
+					"\r\n",
+					"display(Patient_identifier_df.limit(10))\r\n",
+					"\r\n",
+					"Patient_identifier_df.write.mode(write_mode).parquet(silver_location+\"Patient_identifier/\") \r\n",
+					""
+				],
+				"execution_count": 38
 			}
 		]
 	}
