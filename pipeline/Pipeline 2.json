@@ -1,0 +1,218 @@
+{
+	"name": "Pipeline 2",
+	"properties": {
+		"activities": [
+			{
+				"name": "NDJSON_Ingestion_Patient",
+				"type": "SynapseNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"parameters": {
+						"StorageName": {
+							"value": {
+								"value": "@pipeline().parameters.StorageName",
+								"type": "Expression"
+							},
+							"type": "string"
+						},
+						"DatasetSize": {
+							"value": {
+								"value": "@pipeline().parameters.DatasetSize",
+								"type": "Expression"
+							},
+							"type": "string"
+						}
+					},
+					"snapshot": true,
+					"sparkPool": {
+						"referenceName": {
+							"value": "@pipeline().parameters.SparkPoolName",
+							"type": "Expression"
+						},
+						"type": "BigDataPoolReference"
+					},
+					"conf": {
+						"spark.dynamicAllocation.enabled": null,
+						"spark.dynamicAllocation.minExecutors": null,
+						"spark.dynamicAllocation.maxExecutors": null
+					},
+					"numExecutors": null
+				}
+			},
+			{
+				"name": "PatientParquet2Sink",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "NDJSON_Ingestion_Patient",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine",
+					"runConcurrently": true
+				}
+			},
+			{
+				"name": "PatientAddress_large2SQL",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Create Tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ParquetSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": {
+								"value": "@concat('fhir/',pipeline().parameters.DatasetSize,'/PatientAddress')",
+								"type": "Expression"
+							},
+							"wildcardFileName": "*.parquet",
+							"enablePartitionDiscovery": false
+						}
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true
+				}
+			},
+			{
+				"name": "PatientIdentifier_large2SQL",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Create Tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ParquetSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": {
+								"value": "@concat('fhir/',pipeline().parameters.DatasetSize,'/PatientIdentifier')",
+								"type": "Expression"
+							},
+							"wildcardFileName": "*.parquet",
+							"enablePartitionDiscovery": false
+						}
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true
+				}
+			},
+			{
+				"name": "Create Tables",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "PatientParquet2Sink",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": "IF OBJECT_ID('fhir.PatientAddress') IS NOT NULL\r\nBEGIN\r\n    DROP TABLE [fhir].[PatientAddress]\r\nEND\r\n\r\n\r\nCREATE TABLE [fhir].[PatientAddress]\r\n( \r\n\t[id] [nvarchar](64)  NULL,\r\n\t[address.city] [nvarchar](50)  NULL,\r\n\t[address.country] [nvarchar](50)  NULL,\r\n\t[address.extension.extension.url] [nvarchar](50)  NULL,\r\n\t[address.extension.extension.valueDecimal] [float]  NULL,\r\n\t[address.extension.url] [nvarchar](1000)  NULL,\r\n\t[address.postalCode] [nvarchar](50)  NULL,\r\n\t[address.state] [nvarchar](50)  NULL\r\n)\r\nWITH\r\n(\r\n\tDISTRIBUTION = ROUND_ROBIN,\r\n\tHEAP\r\n)\r\n\r\nIF OBJECT_ID('fhir.PatientIdentifier') IS NOT NULL\r\nBEGIN\r\n    DROP TABLE [fhir].[PatientIdentifier]\r\nEND\r\n\r\nCREATE TABLE [fhir].[PatientIdentifier]\r\n( \r\n\t[patient_id] [nvarchar](64)  NULL,\r\n\t[birthDate] [nvarchar](200)  NULL,\r\n\t[deceasedDateTime] [nvarchar](200)  NULL,\r\n\t[gender] [nvarchar](50)  NULL,\r\n\t[text] [nvarchar](1000)  NULL,\r\n\t[multipleBirthBoolean] [bit]  NULL,\r\n\t[multipleBirthInteger] [bigint]  NULL,\r\n\t[resourceType] [nvarchar](100)  NULL,\r\n\t[div] [nvarchar](max)  NULL,\r\n\t[status] [nvarchar](500)  NULL,\r\n\t[identifier.system] [nvarchar](2000)  NULL,\r\n\t[identifier.type.coding.code] [nvarchar](500)  NULL,\r\n\t[identifier.type.coding.display] [nvarchar](1000)  NULL,\r\n\t[identifier.type.coding.system] [nvarchar](1000)  NULL,\r\n\t[identifier.type.text] [nvarchar](1000)  NULL,\r\n\t[identifier.value] [nvarchar](640)  NULL\r\n)\r\nWITH\r\n(\r\n\tDISTRIBUTION = ROUND_ROBIN,\r\n\tHEAP\r\n)"
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"StorageName": {
+				"type": "string",
+				"defaultValue": "synapsee2elake"
+			},
+			"DatabaseName": {
+				"type": "string",
+				"defaultValue": "synapsee2edw"
+			},
+			"ServerName": {
+				"type": "string",
+				"defaultValue": "synapsee2e"
+			},
+			"SparkPoolName": {
+				"type": "string",
+				"defaultValue": "synapsee2espark"
+			},
+			"DatasetSize": {
+				"type": "string",
+				"defaultValue": "1tb"
+			}
+		},
+		"folder": {
+			"name": "Patient"
+		},
+		"annotations": []
+	}
+}
