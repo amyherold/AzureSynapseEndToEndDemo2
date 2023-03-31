@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "6f397a5c-9d2d-4996-8742-da6e13721760"
+				"spark.autotune.trackingId": "f7e96f51-2c7e-4644-a524-6477a7e88c74"
 			}
 		},
 		"metadata": {
@@ -54,7 +54,7 @@
 					"StorageName = \"amheroldhackathonstorage\"\r\n",
 					"DatasetSize = \"30tb\""
 				],
-				"execution_count": 4
+				"execution_count": 5
 			},
 			{
 				"cell_type": "code",
@@ -74,7 +74,7 @@
 					"silver_location = \"abfss://silver@\" + StorageName + \".dfs.core.windows.net/\"\r\n",
 					"write_mode=\"overwrite\""
 				],
-				"execution_count": 2
+				"execution_count": 6
 			},
 			{
 				"cell_type": "code",
@@ -92,7 +92,7 @@
 				"source": [
 					"Observation_df=spark.read.json(bronze_location)"
 				],
-				"execution_count": 3
+				"execution_count": 7
 			},
 			{
 				"cell_type": "code",
@@ -115,7 +115,7 @@
 					"Observation_df=Observation_df.withColumnRenamed(\"subject\",\"patient_id_reference\")\r\n",
 					"Observation_df=Observation_df.withColumnRenamed(\"encounter\",\"encounter_id_reference\")"
 				],
-				"execution_count": null
+				"execution_count": 8
 			},
 			{
 				"cell_type": "code",
@@ -137,9 +137,33 @@
 					"\r\n",
 					"Observation_valueCodeableConcept_df = Observation_valueCodeableConcept_explode_df.select(\"id\",\"coding.*\",\"valueCodeableConcept_text\").toDF(*(\"id\",\"valueCodeableConcept_code\", \"valueCodeableConcept_display\",\"valueCodeableConcept_system\",\"valueCodeableConcept_text\"))\r\n",
 					"\r\n",
-					"Observation_category_df.write.mode(write_mode).parquet(silver_location+\"Observation_valueCodeableConcept/\")\t"
+					"Observation_valueCodeableConcept_df.write.mode(write_mode).parquet(silver_location+\"Observation_valueCodeableConcept/\")\t"
 				],
-				"execution_count": null
+				"execution_count": 10
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"\r\n",
+					"Observation_code_explode_df = Observation_df.select(\"id\",\"code.text\",explode(Observation_df.code.coding)).toDF(*(\"id\",\"text\",\"coding\"))\r\n",
+					"\r\n",
+					"Observation_code_df = Observation_code_explode_df.select(\"id\",\"text\",\"coding.*\").toDF(*(\"id\",\"code_text\",\"coding_code\",\"coding_display\",\"coding_system\"))  \r\n",
+					"\r\n",
+					"Observation_code_df.write.mode(write_mode).parquet(silver_location+\"Observation_code/\")"
+				],
+				"execution_count": 11
 			}
 		]
 	}
