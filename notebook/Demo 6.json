@@ -1,0 +1,498 @@
+{
+	"name": "Demo 6",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "1775f7cf-faf3-4c0b-a4ca-f53f0cc606da"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h1> Demo 6: incremental Loading with Spark Pools"
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3>We will start off by creating a delta table out of our customer dimension"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					},
+					"collapsed": true
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"df = spark.read.load('abfss://raw@synapseinaday.dfs.core.windows.net/Dimension/Customer/', format='parquet')\r\n",
+					"\r\n",
+					"df.write.format(\"delta\").save(\"/delta/CustomerDimension\")"
+				],
+				"execution_count": 16
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3> We will now read the log to see what entries we have in our delta log at this point in time"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					},
+					"collapsed": true
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"[log_line.value for log_line in spark.read.text( \"/delta/CustomerDimension/_delta_log/\").collect()]"
+				],
+				"execution_count": 18
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3> As you can see we currently only see the WRITE or Insert operation we did and that we added 403 rows"
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3> We will now create a spark database which will keep our hive tables"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"CREATE DATABASE WWI_Spark"
+				],
+				"execution_count": 58
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3>Next we will register our delta table into our WWI_Spark Database"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"\r\n",
+					"CREATE TABLE IF NOT EXISTS wwi_spark.CustomerDimension USING DELTA\r\n",
+					"LOCATION '/delta/CustomerDimension/'"
+				],
+				"execution_count": 59
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3> Now we will need a connection to our Serverless SQL Pool to edit some data from our Dimension source"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					},
+					"collapsed": true
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"\r\n",
+					"jdbcHostname = \"synapseinadaywe-ondemand.sql.azuresynapse.net\"\r\n",
+					"jdbcDatabase = \"WWI\"\r\n",
+					"\r\n",
+					"\r\n",
+					"jdbcPort = 1433\r\n",
+					"jdbcUrl = \"jdbc:sqlserver://{0}:{1};database={2}\".format(jdbcHostname, jdbcPort, jdbcDatabase)\r\n",
+					"connectionProperties = {\r\n",
+					"  \"user\" : \"***\",\r\n",
+					"  \"password\" : \"****\",\r\n",
+					"  \"driver\" : \"com.microsoft.sqlserver.jdbc.SQLServerDriver\"\r\n",
+					"}"
+				],
+				"execution_count": 38
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3>We update the customer value of the CustomerDimension for customerkey 1 & add a new customer with id 1000"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"CustomerQuery = \"\"\"(\r\n",
+					"SELECT\r\n",
+					"     CustomerKey, WWICustomerID,\r\n",
+					"     cast(Customer + cast(NEWID() as varchar(100)) as varchar(400)) as Customer , \r\n",
+					"     BillToCustomer, Category, BuyingGroup, PrimaryContact, PostalCode, ValidFrom, ValidTo, LineageKey\r\n",
+					"FROM\r\n",
+					"    OPENROWSET(\r\n",
+					"        BULK 'raw/Dimension/Customer/Dimension.Customer.parquet',\r\n",
+					"        DATA_SOURCE = 'RawDS',\r\n",
+					"        FORMAT='PARQUET'\r\n",
+					"    ) AS [result]\r\n",
+					"    WHERE CustomerKey = '1'\r\n",
+					"UNION \r\n",
+					"SELECT 1000,1000,'DUMMY CUSTOMER','DUMMY CUSTOMER','DUMMY CUSTOMER','DUMMY CUSTOMER','DUMMY CUSTOMER',999999,'2013-01-01T00:00:00.0000000','9999-12-31T23:59:59.9999999',2)TableA\r\n",
+					"\"\"\"\r\n",
+					"\r\n",
+					"df2 = spark.read.jdbc(url=jdbcUrl, table=CustomerQuery, properties=connectionProperties)\r\n",
+					"display(df2)"
+				],
+				"execution_count": 63
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3>We then merge the data into the delta table"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					},
+					"collapsed": true
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"import delta\r\n",
+					"\r\n",
+					"DeltaTable = delta.DeltaTable.forPath(spark,\"/delta/CustomerDimension/\")\r\n",
+					"\r\n",
+					"\r\n",
+					"(DeltaTable\r\n",
+					"    .alias(\"DeltaCustomers\")\r\n",
+					"    .merge(df2.alias(\"UpdatedCustomers\"),\r\n",
+					"        \"DeltaCustomers.CustomerKey == UpdatedCustomers.CustomerKey\")\r\n",
+					"        .whenMatchedUpdate(set = {\"Customer\" : \"UpdatedCustomers.Customer\"})\r\n",
+					"        .whenNotMatchedInsert(values = {\"CustomerKey\" : \"UpdatedCustomers.CustomerKey\" , \"WWICustomerID\" : \"UpdatedCustomers.WWICustomerID\" , \"Customer\" : \"UpdatedCustomers.Customer\" , \"BillToCustomer\" : \"UpdatedCustomers.BillToCustomer\" , \"Category\" : \"UpdatedCustomers.Category\" , \"BuyingGroup\" : \"UpdatedCustomers.BuyingGroup\" , \"PrimaryContact\" : \"UpdatedCustomers.PrimaryContact\" , \"PostalCode\" : \"UpdatedCustomers.PostalCode\" , \"ValidFrom\" : \"UpdatedCustomers.ValidFrom\" ,\"ValidTo\" : \"UpdatedCustomers.ValidTo\" ,\"LineageKey\" : \"UpdatedCustomers.LineageKey\" })\r\n",
+					"        .execute()\r\n",
+					")        "
+				],
+				"execution_count": 64
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3> As we can see below the value got changed and added a unique identifier and the new row was added"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"\r\n",
+					"select * from wwi_spark.customerdimension where CustomerKey = 1 or CustomerKey = 1000"
+				],
+				"execution_count": 65
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3> With the History command we can see what changes happened to our table and what versions we have(First Value)"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"DeltaTable.history().show(20, 1000, False)"
+				],
+				"execution_count": 69
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"<h3> We can use the VersionAsOf command to see what changes happened to our data"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"History = spark.read.format(\"delta\").option(\"versionAsOf\", 0).load(\"/delta/CustomerDimension/\")\r\n",
+					"History.show(2,False)"
+				],
+				"execution_count": 73
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"GIVE ME SOME WHITESPACE\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					""
+				]
+			}
+		]
+	}
+}
