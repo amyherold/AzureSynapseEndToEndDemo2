@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "40939cfb-c509-4141-9c04-e006641078f5"
+				"spark.autotune.trackingId": "121fe959-da10-428b-bebc-adb075c8cadc"
 			}
 		},
 		"metadata": {
@@ -61,8 +61,8 @@
 					]
 				},
 				"source": [
-					"StorageName = \"medicaldl\"\r\n",
-					"DatasetSize = \"1tb\""
+					"StorageName = \"amheroldhackathonstorage\"\r\n",
+					"DatasetSize = \"30tb\""
 				],
 				"execution_count": 36
 			},
@@ -76,8 +76,8 @@
 				},
 				"source": [
 					"%%sql\r\n",
-					"DROP DATABASE IF EXISTS fhirdbexploration CASCADE;\r\n",
-					"CREATE DATABASE fhirdbexploration;"
+					"DROP DATABASE IF EXISTS fhir_data CASCADE;\r\n",
+					"CREATE DATABASE fhir_data;"
 				],
 				"execution_count": 20
 			},
@@ -100,7 +100,7 @@
 				},
 				"source": [
 					"%%sql\r\n",
-					"USE fhirdbexploration"
+					"USE fhir_data"
 				],
 				"execution_count": 23
 			},
@@ -118,7 +118,7 @@
 					}
 				},
 				"source": [
-					"curated_location = \"abfss://curated@\" + StorageName + \".dfs.core.windows.net/fhir/\"+ DatasetSize +\"/\""
+					"curated_location = \"abfss://silver@\" + StorageName + \".dfs.core.windows.net/fhir/\"+ DatasetSize +\"/\""
 				],
 				"execution_count": 33
 			},
