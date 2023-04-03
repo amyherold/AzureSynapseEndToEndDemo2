@@ -12,12 +12,12 @@
 			"driverCores": 8,
 			"executorMemory": "56g",
 			"executorCores": 8,
-			"numExecutors": 2,
+			"numExecutors": 4,
 			"conf": {
 				"spark.dynamicAllocation.enabled": "false",
-				"spark.dynamicAllocation.minExecutors": "2",
-				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "dc4fa4c6-e5f9-49a6-9cec-11ce9e2a7650"
+				"spark.dynamicAllocation.minExecutors": "4",
+				"spark.dynamicAllocation.maxExecutors": "4",
+				"spark.autotune.trackingId": "eb6a9bba-b428-4af9-9509-3bea01f66a70"
 			}
 		},
 		"metadata": {
@@ -70,11 +70,45 @@
 					}
 				},
 				"source": [
-					"bronze_location = \"abfss://bronze@\" + StorageName + \".dfs.core.windows.net/incremental_data/observation/year=2021/month=*/day=*\"\r\n",
-					"silver_location = \"abfss://silver@\" + StorageName + \".dfs.core.windows.net/\"\r\n",
+					"bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/incremental_data/claim/year=*/month=*/day=*/*.json\"\r\n",
+					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_procedure/\"\r\n",
+					"write_mode=\"overwrite\"\r\n",
+					"\r\n",
+					""
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"delta_claim_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_procedure/delta/\"\r\n",
 					"write_mode=\"overwrite\""
 				],
-				"execution_count": null
+				"execution_count": 13
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#### Create a data frame with the loaded silver data"
+				]
 			},
 			{
 				"cell_type": "code",
@@ -94,9 +128,501 @@
 				},
 				"source": [
 					"%%pyspark\r\n",
-					"df = spark.read.load('abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Dimension/Customer/', format='parquet')\r\n",
+					"Claim_procedure_df = spark.read.load(silver_location, format='parquet')\r\n",
 					"\r\n",
-					"df.write.format(\"delta\").save(\"/delta/CustomerDimension\")"
+					"#Claim_procedure_df.write.format(\"delta\").save(\"/delta/Claim_procedure\")"
+				],
+				"execution_count": 4
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Claim_df = Claim_procedure_df"
+				],
+				"execution_count": 8
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Claim_df.printSchema()"
+				],
+				"execution_count": 9
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### **Create a data frame with the incremental data**"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"Claim_2021_df = spark.read.option(\"multiline\",\"false\").json(bronze_location)\r\n",
+					"#Claim_2021_df = spark.read.option(\"multiline\",\"false\").parquet(bronze_location, format='json')\r\n",
+					"#Observation_df = spark.read.option(\"multiline\", \"false\").json(raw_location+\"Observation.ndjson\")\r\n",
+					"\r\n",
+					"#Claim_procedure_df.write.format(\"delta\").save(\"/delta/Claim_procedure\")"
+				],
+				"execution_count": 10
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": true
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Claim_2021_df.printSchema()"
+				],
+				"execution_count": 11
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#### Create database for the hive tables"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": true
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\r\n",
+					"CREATE DATABASE fhir_delta \r\n",
+					""
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"###### Create data frame with the incremental claim procedure data"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Claim_procedure_2021_explode_df = Claim_2021_df.select(\"id\",explode(Claim_2021_df.procedure))\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Claim_procedure_new_df= Claim_procedure_2021_explode_df.toDF(*( \"id\",\"procedure\"))\r\n",
+					"\r\n",
+					"Claim_procedure_new_df = Claim_procedure_new_df.select(\"id\",\"procedure.procedureReference.reference\",\"procedure.sequence\").toDF(*(\"Claim_id\",\"procedure_reference\",\"procedure_sequence\"))\r\n",
+					"\r\n",
+					"Claim_procedure_new_df.printSchema()\r\n",
+					"\r\n",
+					"\r\n",
+					"#Claim_procedure_new_df=Claim_procedure_new_df.withColumn(\"procedure_reference\",regexp_replace(\"procedure_reference\",\"Procedure/\",\"\"))\r\n",
+					"\r\n",
+					"#Claim_procedure_new_df.write.mode(write_mode).parquet(silver_location+\"Claim_procedure/\") "
+				],
+				"execution_count": 12
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#-------------create the delta with the existing records------------------\r\n",
+					"from delta.tables import *\r\n",
+					"\r\n",
+					"Claim_procedure_new_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/delta/delta2021/\")\r\n",
+					"\r\n",
+					"#delta_observation_procedure = DeltaTable.convertToDelta(spark,\"parquet.`abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/delta`\")\r\n",
+					""
+				],
+				"execution_count": 22
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"spark.sql(\"CREATE DATABASE IF NOT EXISTS fhir_data\")\r\n",
+					"spark.sql(\"CREATE TABLE IF NOT EXISTS fhir_data.delta_claim_procedure USING DELTA LOCATION '{0}'\".format(delta_claim_location))\r\n",
+					"#spark.sql(\"CREATE TABLE IF NOT EXISTS fhir_data.claim_procedure USING LOCATION '{0}'\".format(silver_location))"
+				],
+				"execution_count": 16
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"CREATE DATABASE IF NOT EXISTS fhir_data;\r\n",
+					"\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_claim_procedure USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/delta/\";\r\n",
+					""
+				],
+				"execution_count": 17
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\r\n",
+					"CREATE DATABASE IF NOT EXISTS fhir_data;\r\n",
+					"\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.claim_procedure_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/delta/delta2021/\";\r\n",
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"DESCRIBE fhir_data.delta_claim_procedure"
+				],
+				"execution_count": 18
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"SELECT *\r\n",
+					"FROM fhir_data.delta_claim_procedure\r\n",
+					""
+				],
+				"execution_count": 21
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\r\n",
+					"MERGE INTO fhir_data.delta_claim_procedure target\r\n",
+					"USING "
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"observation_2021 = observation_df.withColumn(\"year\",f.year(f.col('issued'))).withColumn(\"month\",f.month(f.col('issued'))).withColumn(\"day\",f.dayofmonth(f.col('issued'))).filter(f.col(\"year\") == 2021)\r\n",
+					"observation_2021.coalesce(3000).write.partitionBy(\"year\",\"month\",\"day\").json(\"abfss://bronze@prsynapselab.dfs.core.windows.net/incremental_data/observation/\")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"observation_procedure_Schema = spark.read.parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/part-00000-61cead24-54ee-47fd-8664-67c8b05c675e-c000.snappy.parquet\").schema\r\n",
+					"\r\n",
+					"observation_procedure_df = spark.read.schema(observation_procedure_Schema).parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/*.parquet\")\r\n",
+					"\r\n",
+					"\r\n",
+					"observation_procedure_df.printSchema()\r\n",
+					"\r\n",
+					"\r\n",
+					""
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"display(observation_procedure_df.limit(10))"
+				],
+				"execution_count": 5
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#-------------create the delta with the existing records------------------\r\n",
+					"from delta.tables import *\r\n",
+					"\r\n",
+					"observation_procedure_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/delta/\")\r\n",
+					"\r\n",
+					"#delta_observation_procedure = DeltaTable.convertToDelta(spark,\"parquet.`abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/delta`\")\r\n",
+					""
+				],
+				"execution_count": 7
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": true
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"[log_line.value for log_line in spark.read.text( \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/delta/_delta_log\").collect()]"
+				],
+				"execution_count": 8
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\r\n",
+					"CONVERT to DELTA parquet.`abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/delta`"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"observation_2016_2020 = observation_df.withColumn(\"year\",f.year(f.col('issued'))).filter(f.col(\"year\").between(2016,2020))\r\n",
+					"observation_2016_2020.coalesce(3000).write.partitionBy(\"year\").json(\"abfss://bronze@prsynapselab.dfs.core.windows.net/historic_data/observation/\")"
 				],
 				"execution_count": null
 			},
@@ -229,6 +755,30 @@
 					}
 				},
 				"source": [
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from delta.tables import *\r\n",
+					"\r\n",
+					"deltaClaims = DeltaTable.convertToDelta(spark,'parquet',)\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
 					""
 				],
 				"execution_count": null
