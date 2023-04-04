@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "55fdc88a-5f6f-45fa-b49f-3b43e2d8ef16"
+				"spark.autotune.trackingId": "9d5581b3-49a0-4e55-8ea7-283c81bd2856"
 			}
 		},
 		"metadata": {
@@ -1263,7 +1263,8 @@
 					},
 					"microsoft": {
 						"language": "sparksql"
-					}
+					},
+					"collapsed": false
 				},
 				"source": [
 					"%%sql\r\n",
@@ -1288,6 +1289,297 @@
 					""
 				],
 				"execution_count": 33
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"###### Now do the same thing for claims main"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"StorageName = \"amheroldhackathonstorage\"\r\n",
+					"DatasetSize = \"30tb\""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/historic_data/claim/year=*/month=*/day=*/*.json\"\r\n",
+					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_main/\"\r\n",
+					"delta_claim_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_main/delta/\"\r\n",
+					"write_mode=\"overwrite\""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Claim_df=spark.read.json(bronze_location)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/incremental_data/claim/year=2021/month=*/day=*/*.json\"\r\n",
+					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_diagnosis/\"\r\n",
+					"delta_claim_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_diagnosis/delta/\"\r\n",
+					"write_mode=\"overwrite\""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"Claim_2021_df = spark.read.option(\"multiline\",\"false\").json(bronze_location)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"#claim_insurance_Schema = spark.read.parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/part-00000-61cead24-54ee-47fd-8664-67c8b05c675e-c000.snappy.parquet\").schema\r\n",
+					"\r\n",
+					"\r\n",
+					"#%%pyspark\r\n",
+					"claim_main_df = spark.read.option(\"multiline\",\"false\").parquet(silver_location)\r\n",
+					"\r\n",
+					"\r\n",
+					"#claim_insurance_df = spark.read.schema(observation_procedure_Schema).parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_insurance/*.parquet\")\r\n",
+					"\r\n",
+					"claim_main_df.printSchema()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"\r\n",
+					"Claim_main_explode_df = Claim_2021_df.select(\"id\", explode(Claim_2021_df.diagnosis))\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Claim_main_2021_df= Claim_main_explode_df.toDF(*( \"Claim_id\",\"diagnosis\"))\r\n",
+					"\r\n",
+					"Claim_diagnosis_2021_df = Claim_diagnosis_2021_df.select(\"Claim_id\",\"diagnosis.diagnosisReference.reference\",\"diagnosis.sequence\").toDF(*(\"Claim_id\",\"diagnosis_reference\",\"diagnosis_sequence\" ))\r\n",
+					"\r\n",
+					"#    base_df_explode = base_df.select(explode(base_df.entry))"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Claim_main_explode_df = Claim_2021_df.select(\"id\",\"resourceType\",\"status\",\"billablePeriod.end\",\"billablePeriod.start\",\"created\",\"patient.display\",\"patient.reference\",\r\n",
+					"    \"prescription.reference\",\"provider.display\",\"provider.reference\",\"total.currency\",\"total.value\",\"use\")\r\n",
+					"\r\n",
+					"#use toDF() to rename the columns\r\n",
+					"Claim_main_2021_df= Claim_main_explode_df.toDF(*(\"Claim_id\",\"resourceType\",\"status\",\"billablePeriod_end\",\"billablePeriod_start\",\"created\",\r\n",
+					"    \"patient_display\",\"patient_id_reference\",\"prescription_reference\",\"provider_display\",\"provider_org_id_reference\",\"total_currency\",\"total_value\",\"use\"))\r\n",
+					"\r\n",
+					"Claim_main_2021_df = Claim_main_2021_df.withColumn(\"patient_id_reference\",regexp_replace(\"patient_id_reference\",\"Patient/\",\"\")).withColumn(\r\n",
+					"    \"provider_org_id_reference\",regexp_replace(\"provider_org_id_reference\",\"Organization/\",\"\"))"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					""
+				],
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
