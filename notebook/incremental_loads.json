@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "2ce7984e-ae8c-43ce-9b57-7bf0c5fc59e2"
+				"spark.autotune.trackingId": "55fdc88a-5f6f-45fa-b49f-3b43e2d8ef16"
 			}
 		},
 		"metadata": {
@@ -1215,17 +1215,18 @@
 					},
 					"microsoft": {
 						"language": "sparksql"
-					}
+					},
+					"collapsed": false
 				},
 				"source": [
 					"%%sql\r\n",
 					"--CREATE DATABASE IF NOT EXISTS fhir_data;\r\n",
-					"CREATE TABLE IF NOT EXISTS fhir_data.delta_claim_insurance USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_insurance/delta/\";\r\n",
-					"CREATE TABLE IF NOT EXISTS fhir_data.delta_claim_insurance_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_insurance/delta/delta2021/\";\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_claim_diagnosis USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_diagnosis/delta/\";\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_claim_diagnosis_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_diagnosis/delta/delta2021/\";\r\n",
 					"\r\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 31
 			},
 			{
 				"cell_type": "code",
@@ -1241,12 +1242,12 @@
 					}
 				},
 				"source": [
-					"claim_insurance_df.printSchema()\r\n",
+					"claim_diagnosis_df.printSchema()\r\n",
 					"\r\n",
 					"\r\n",
-					"Claim_insurance_2021_df.printSchema()"
+					"Claim_diagnosis_2021_df.printSchema()"
 				],
-				"execution_count": null
+				"execution_count": 32
 			},
 			{
 				"cell_type": "code",
@@ -1266,31 +1267,27 @@
 				},
 				"source": [
 					"%%sql\r\n",
-					"MERGE INTO fhir_data.delta_claim_insurance target\r\n",
-					"USING fhir_data.delta_claim_insurance_2021 source\r\n",
+					"MERGE INTO fhir_data.delta_claim_diagnosis target\r\n",
+					"USING fhir_data.delta_claim_diagnosis_2021 source\r\n",
 					"ON\r\n",
 					"source.Claim_ID = target.Claim_ID\r\n",
-					"AND source.insurance_coverage_display = target.insurance_coverage_display\r\n",
-					"AND source.insurance_focal = target.insurance_focal\r\n",
-					"AND source.insurance_sequence = target.insurance_sequence\r\n",
+					"AND source.diagnosis_reference = target.diagnosis_reference\r\n",
+					"AND source.diagnosis_sequence = target.diagnosis_sequence\r\n",
 					"WHEN MATCHED THEN\r\n",
 					"UPDATE SET\r\n",
 					"target.Claim_ID = source.Claim_ID\r\n",
-					",target.insurance_coverage_display = source.insurance_coverage_display\r\n",
-					",target.insurance_focal = source.insurance_focal\r\n",
-					",target.insurance_sequence = source.insurance_sequence\r\n",
+					",target.diagnosis_reference = source.diagnosis_reference\r\n",
+					",target.diagnosis_sequence = source.diagnosis_sequence\r\n",
 					"WHEN NOT MATCHED THEN\r\n",
 					"INSERT (target.Claim_ID \r\n",
-					",target.insurance_coverage_display\r\n",
-					",target.insurance_focal\r\n",
-					",target.insurance_sequence)\r\n",
+					",target.diagnosis_reference\r\n",
+					",target.diagnosis_sequence)\r\n",
 					"VALUES (source.Claim_ID\r\n",
-					",source.insurance_coverage_display\r\n",
-					",source.insurance_focal\r\n",
-					",source.insurance_sequence)\r\n",
+					",source.diagnosis_reference\r\n",
+					",source.diagnosis_sequence)\r\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 33
 			},
 			{
 				"cell_type": "code",
