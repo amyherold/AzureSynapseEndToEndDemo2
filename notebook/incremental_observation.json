@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "bdaad590-aadc-4648-8a4b-66c66ebc34cd"
+				"spark.autotune.trackingId": "847331b1-c5d9-4c75-b79a-37f719d7cb4d"
 			}
 		},
 		"metadata": {
@@ -643,13 +643,13 @@
 					"from pyspark.sql.functions import explode\r\n",
 					"from pyspark.sql.functions import explode_outer\r\n",
 					"\r\n",
-					"Observation_component_explode_df = Observation_df.select(\"Observation_id\",explode(Observation_df.component))\r\n",
+					"Observation_component_explode_df = Observation_2021_df.select(\"id\",explode(Observation_2021_df.component))\r\n",
 					"\r\n",
-					"Observation_component_explode2_df = Observation_component_explode_df.select(\"Observation_id\",explode_outer(Observation_component_explode_df.col.code.coding),\"col.code.text\",\r\n",
+					"Observation_component_explode2_df = Observation_component_explode_df.select(\"id\",explode_outer(Observation_component_explode_df.col.code.coding),\"col.code.text\",\r\n",
 					"    \"col.valueQuantity.code\",\"col.valueQuantity.system\",\"col.valueQuantity.unit\",\"col.valueQuantity.value\").toDF(*(\"Observation_id\",\"component_code\",\"component_text\",\r\n",
 					"    \"component_valueQuantity_code\",\"component_valueQuantity_system\",\"component_valueQuantity_unit\",\"component_valueQuantity_value\"))   \r\n",
 					"\r\n",
-					"Observation_component_df = Observation_component_explode2_df.select(\"Observation_id\",\"component_code.*\",\"component_text\",\r\n",
+					"Observation_component_2021_df = Observation_component_explode2_df.select(\"Observation_id\",\"component_code.*\",\"component_text\",\r\n",
 					"    \"component_valueQuantity_code\",\"component_valueQuantity_system\",\"component_valueQuantity_unit\",\"component_valueQuantity_value\").toDF(*(\"Observation_id\",\"component_code\",\r\n",
 					"    \"component_display\",\"component_system\",\"component_text\",\r\n",
 					"    \"component_valueQuantity_code\",\"component_valueQuantity_system\",\"component_valueQuantity_unit\",\"component_valueQuantity_value\"))"
@@ -670,31 +670,7 @@
 					}
 				},
 				"source": [
-					"from pyspark.sql.functions import explode\r\n",
-					"\r\n",
-					"Observation_component_explode_df = Observation_2021_df.select(\"id\",explode(Observation_2021_df.category)).toDF(*(\"Observation_id\",\"category\"))\r\n",
-					"\r\n",
-					"Observation_component_explode2_df = Observation_code_explode_df.select(\"Observation_id\",explode(Observation_category_explode_df.category.coding)).toDF(*(\"Observation_id\",\"category\"))    \r\n",
-					"\r\n",
-					"Observation_component_2021_df = Observation_code_explode2_df.select(\"Observation_id\",\"category.*\").toDF(*(\"Observation_id\",\"category_code\",\"category_display\",\"category_system\"))"
-				],
-				"execution_count": null
-			},
-			{
-				"cell_type": "code",
-				"metadata": {
-					"jupyter": {
-						"source_hidden": false,
-						"outputs_hidden": false
-					},
-					"nteract": {
-						"transient": {
-							"deleting": false
-						}
-					}
-				},
-				"source": [
-					"Observation_category_2021_df.printSchema()"
+					"Observation_component_2021_df.printSchema()"
 				],
 				"execution_count": null
 			},
@@ -715,9 +691,9 @@
 					"#-------------create the delta with the existing records------------------\r\n",
 					"from delta.tables import *\r\n",
 					"\r\n",
-					"observation_code_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_code/delta/\")\r\n",
+					"observation_component_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_component/delta/\")\r\n",
 					"\r\n",
-					"Observation_code_2021_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_code/delta/delta2021/\")"
+					"Observation_component_2021_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_component/delta/delta2021/\")"
 				],
 				"execution_count": null
 			},
@@ -740,8 +716,8 @@
 				"source": [
 					"%%sql\r\n",
 					"--CREATE DATABASE IF NOT EXISTS fhir_data;\r\n",
-					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_code USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_code/delta/\";\r\n",
-					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_code_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_code/delta/delta2021/\";\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_component USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_component/delta/\";\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_component_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_component/delta/delta2021/\";\r\n",
 					""
 				],
 				"execution_count": null
