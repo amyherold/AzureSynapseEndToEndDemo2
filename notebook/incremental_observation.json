@@ -3,17 +3,21 @@
 	"properties": {
 		"nbformat": 4,
 		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "fhirspark",
+			"type": "BigDataPoolReference"
+		},
 		"sessionProperties": {
-			"driverMemory": "28g",
-			"driverCores": 4,
-			"executorMemory": "28g",
-			"executorCores": 4,
-			"numExecutors": 2,
+			"driverMemory": "56g",
+			"driverCores": 8,
+			"executorMemory": "56g",
+			"executorCores": 8,
+			"numExecutors": 4,
 			"conf": {
 				"spark.dynamicAllocation.enabled": "false",
-				"spark.dynamicAllocation.minExecutors": "2",
-				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "b540b9b0-9b7d-4efa-b19b-9cc3c250cce9"
+				"spark.dynamicAllocation.minExecutors": "4",
+				"spark.dynamicAllocation.maxExecutors": "4",
+				"spark.autotune.trackingId": "78c63e50-fce4-4d1b-9143-c1dc33149bbd"
 			}
 		},
 		"metadata": {
@@ -25,6 +29,21 @@
 			},
 			"language_info": {
 				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/1edafb84-8c33-41e9-aa81-994d9cdc325c/resourceGroups/amherold_hackathon/providers/Microsoft.Synapse/workspaces/ws-amherold-hackathon/bigDataPools/fhirspark",
+				"name": "fhirspark",
+				"type": "Spark",
+				"endpoint": "https://ws-amherold-hackathon.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/fhirspark",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.1",
+				"nodeCount": 5,
+				"cores": 8,
+				"memory": 56,
+				"automaticScaleJobs": false
 			},
 			"sessionKeepAliveTimeout": 30
 		},
@@ -51,14 +70,299 @@
 					}
 				},
 				"source": [
-					"bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/historic_data/claim/year=*/*.json\"\r\n",
-					"#bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/incremental_data/claim/year=*/month=*/day=*/*.json\"\r\n",
-					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_insurance/\"\r\n",
+					"#bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/historic_data/claim/year=*/*.json\"\r\n",
+					"bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/incremental_data/observation/year=2021/month=*/day=*/*.json\"\r\n",
+					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Observation_category/\"\r\n",
 					"write_mode=\"overwrite\"\r\n",
 					"\r\n",
 					""
 				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"###### Create the incremental main data frame"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"Observation_2021_df = spark.read.option(\"multiline\",\"false\").json(bronze_location)"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"#claim_insurance_Schema = spark.read.parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/part-00000-61cead24-54ee-47fd-8664-67c8b05c675e-c000.snappy.parquet\").schema\r\n",
+					"\r\n",
+					"\r\n",
+					"#%%pyspark\r\n",
+					"observation_category_df = spark.read.option(\"multiline\",\"false\").parquet(silver_location)\r\n",
+					"\r\n",
+					"\r\n",
+					"#claim_insurance_df = spark.read.schema(observation_procedure_Schema).parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_insurance/*.parquet\")\r\n",
+					"\r\n",
+					"observation_category_df.printSchema()"
+				],
+				"execution_count": 4
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"\r\n",
+					"Observation_category_explode_df = Observation_2021_df.select(\"id\",explode(Observation_2021_df.category)).toDF(*(\"Observation_id\",\"category\"))\r\n",
+					"\r\n",
+					"Observation_category_explode2_df = Observation_category_explode_df.select(\"Observation_id\",explode(Observation_category_explode_df.category.coding)).toDF(*(\"Observation_id\",\"category\"))    \r\n",
+					"\r\n",
+					"Observation_category_2021_df = Observation_category_explode2_df.select(\"Observation_id\",\"category.*\").toDF(*(\"Observation_id\",\"category_code\",\"category_display\",\"category_system\"))"
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Observation_category_2021_df.printSchema()"
+				],
+				"execution_count": 7
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#-------------create the delta with the existing records------------------\r\n",
+					"from delta.tables import *\r\n",
+					"\r\n",
+					"observation_category_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_category/delta/\")\r\n",
+					"\r\n",
+					"Observation_category_2021_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_category/delta/delta2021/\")\r\n",
+					"\r\n",
+					""
+				],
 				"execution_count": 8
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\r\n",
+					"--CREATE DATABASE IF NOT EXISTS fhir_data;\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_category USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_category/delta/\";\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_category_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_category/delta/delta2021/\";\r\n",
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\r\n",
+					"MERGE INTO fhir_data.delta_claim_main target\r\n",
+					"USING fhir_data.delta_claim_main_2021 source\r\n",
+					"ON\r\n",
+					"source.Claim_id = target.Claim_id                \r\n",
+					"AND source.resourceType = target.resourceType\r\n",
+					"AND source.status = target.status\r\n",
+					"AND source.billablePeriod_end = target.billablePeriod_end\r\n",
+					"AND source.billablePeriod_start = target.billablePeriod_start\r\n",
+					"AND source.created = target.created\r\n",
+					"AND source.patient_display = target.patient_display\r\n",
+					"AND source.patient_id_reference = target.patient_id_reference\r\n",
+					"AND source.prescription_reference = target.prescription_reference\r\n",
+					"AND source.provider_display = target.provider_display\r\n",
+					"AND source.provider_org_id_reference = target.provider_org_id_reference\r\n",
+					"AND source.total_currency = target.total_currency\r\n",
+					"AND source.total_value = target.total_value\r\n",
+					"AND source.use = target.use\r\n",
+					"WHEN MATCHED THEN\r\n",
+					"UPDATE SET \r\n",
+					"target.Claim_id = source.Claim_id                \r\n",
+					",target.resourceType = source.resourceType\r\n",
+					",target.status = source.status\r\n",
+					",target.billablePeriod_end = source.billablePeriod_end\r\n",
+					",target.billablePeriod_start = source.billablePeriod_start\r\n",
+					",target.created = source.created\r\n",
+					",target.patient_display = source.patient_display\r\n",
+					",target.patient_id_reference = source.patient_id_reference\r\n",
+					",target.prescription_reference = source.prescription_reference\r\n",
+					",target.provider_display = source.provider_display\r\n",
+					",target.provider_org_id_reference = source.provider_org_id_reference\r\n",
+					",target.total_currency = source.total_currency\r\n",
+					",target.total_value = source.total_value\r\n",
+					",target.use            = source.use\r\n",
+					"WHEN NOT MATCHED THEN\r\n",
+					"INSERT (target.Claim_id                  \r\n",
+					",target.resourceType              \r\n",
+					",target.status                    \r\n",
+					",target.billablePeriod_end        \r\n",
+					",target.billablePeriod_start      \r\n",
+					",target.created                   \r\n",
+					",target.patient_display           \r\n",
+					",target.patient_id_reference      \r\n",
+					",target.prescription_reference    \r\n",
+					",target.provider_display          \r\n",
+					",target.provider_org_id_reference \r\n",
+					",target.total_currency            \r\n",
+					",target.total_value               \r\n",
+					",target.use)\r\n",
+					"values (source.Claim_id                \r\n",
+					",source.resourceType\r\n",
+					",source.status\r\n",
+					",source.billablePeriod_end\r\n",
+					",source.billablePeriod_start\r\n",
+					",source.created\r\n",
+					",source.patient_display\r\n",
+					",source.patient_id_reference\r\n",
+					",source.prescription_reference\r\n",
+					",source.provider_display\r\n",
+					",source.provider_org_id_reference\r\n",
+					",source.total_currency\r\n",
+					",source.total_value\r\n",
+					",source.use)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"###### Create the observation data from the silver data"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"#claim_insurance_Schema = spark.read.parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/part-00000-61cead24-54ee-47fd-8664-67c8b05c675e-c000.snappy.parquet\").schema\r\n",
+					"\r\n",
+					"\r\n",
+					"#%%pyspark\r\n",
+					"observation_main_df = spark.read.option(\"multiline\",\"false\").parquet(silver_location)\r\n",
+					"\r\n",
+					"\r\n",
+					"#claim_insurance_df = spark.read.schema(observation_procedure_Schema).parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_insurance/*.parquet\")\r\n",
+					"\r\n",
+					"observation_main_df.printSchema()"
+				],
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
