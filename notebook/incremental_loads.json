@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "9d5581b3-49a0-4e55-8ea7-283c81bd2856"
+				"spark.autotune.trackingId": "a810e65b-34af-4ad7-af23-90dad4896407"
 			}
 		},
 		"metadata": {
@@ -1320,7 +1320,7 @@
 					"StorageName = \"amheroldhackathonstorage\"\r\n",
 					"DatasetSize = \"30tb\""
 				],
-				"execution_count": null
+				"execution_count": 1
 			},
 			{
 				"cell_type": "code",
@@ -1340,67 +1340,6 @@
 					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_main/\"\r\n",
 					"delta_claim_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_main/delta/\"\r\n",
 					"write_mode=\"overwrite\""
-				],
-				"execution_count": null
-			},
-			{
-				"cell_type": "code",
-				"metadata": {
-					"jupyter": {
-						"source_hidden": false,
-						"outputs_hidden": false
-					},
-					"nteract": {
-						"transient": {
-							"deleting": false
-						}
-					}
-				},
-				"source": [
-					"Claim_df=spark.read.json(bronze_location)"
-				],
-				"execution_count": null
-			},
-			{
-				"cell_type": "code",
-				"metadata": {
-					"jupyter": {
-						"source_hidden": false,
-						"outputs_hidden": false
-					},
-					"nteract": {
-						"transient": {
-							"deleting": false
-						}
-					}
-				},
-				"source": [
-					"bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/incremental_data/claim/year=2021/month=*/day=*/*.json\"\r\n",
-					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_diagnosis/\"\r\n",
-					"delta_claim_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_diagnosis/delta/\"\r\n",
-					"write_mode=\"overwrite\""
-				],
-				"execution_count": null
-			},
-			{
-				"cell_type": "code",
-				"metadata": {
-					"jupyter": {
-						"source_hidden": false,
-						"outputs_hidden": false
-					},
-					"nteract": {
-						"transient": {
-							"deleting": false
-						}
-					},
-					"microsoft": {
-						"language": "python"
-					}
-				},
-				"source": [
-					"%%pyspark\r\n",
-					"Claim_2021_df = spark.read.option(\"multiline\",\"false\").json(bronze_location)"
 				],
 				"execution_count": null
 			},
@@ -1449,18 +1388,83 @@
 					}
 				},
 				"source": [
-					"from pyspark.sql.functions import explode\r\n",
-					"\r\n",
-					"Claim_main_explode_df = Claim_2021_df.select(\"id\", explode(Claim_2021_df.diagnosis))\r\n",
-					"\r\n",
-					"#use toDF() to rename the columns\r\n",
-					"Claim_main_2021_df= Claim_main_explode_df.toDF(*( \"Claim_id\",\"diagnosis\"))\r\n",
-					"\r\n",
-					"Claim_diagnosis_2021_df = Claim_diagnosis_2021_df.select(\"Claim_id\",\"diagnosis.diagnosisReference.reference\",\"diagnosis.sequence\").toDF(*(\"Claim_id\",\"diagnosis_reference\",\"diagnosis_sequence\" ))\r\n",
-					"\r\n",
-					"#    base_df_explode = base_df.select(explode(base_df.entry))"
+					"bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/incremental_data/claim/year=2021/month=*/day=*/*.json\"\r\n",
+					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_main/\"\r\n",
+					"delta_claim_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Claim_main/delta/\"\r\n",
+					"write_mode=\"overwrite\""
 				],
-				"execution_count": null
+				"execution_count": 5
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"Claim_2021_df = spark.read.option(\"multiline\",\"false\").json(bronze_location)"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Claim_2021_df.printSchema()"
+				],
+				"execution_count": 7
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"#claim_insurance_Schema = spark.read.parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/part-00000-61cead24-54ee-47fd-8664-67c8b05c675e-c000.snappy.parquet\").schema\r\n",
+					"\r\n",
+					"\r\n",
+					"#%%pyspark\r\n",
+					"claim_main_df = spark.read.option(\"multiline\",\"false\").parquet(silver_location)\r\n",
+					"\r\n",
+					"\r\n",
+					"#claim_insurance_df = spark.read.schema(observation_procedure_Schema).parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_insurance/*.parquet\")\r\n",
+					"\r\n",
+					"claim_main_df.printSchema()"
+				],
+				"execution_count": 6
 			},
 			{
 				"cell_type": "code",
@@ -1489,7 +1493,7 @@
 					"Claim_main_2021_df = Claim_main_2021_df.withColumn(\"patient_id_reference\",regexp_replace(\"patient_id_reference\",\"Patient/\",\"\")).withColumn(\r\n",
 					"    \"provider_org_id_reference\",regexp_replace(\"provider_org_id_reference\",\"Organization/\",\"\"))"
 				],
-				"execution_count": null
+				"execution_count": 8
 			},
 			{
 				"cell_type": "code",
@@ -1505,9 +1509,9 @@
 					}
 				},
 				"source": [
-					""
+					"Claim_main_2021_df.printSchema()"
 				],
-				"execution_count": null
+				"execution_count": 9
 			},
 			{
 				"cell_type": "code",
@@ -1523,9 +1527,16 @@
 					}
 				},
 				"source": [
+					"#-------------create the delta with the existing records------------------\r\n",
+					"from delta.tables import *\r\n",
+					"\r\n",
+					"claim_main_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_main/delta/\")\r\n",
+					"\r\n",
+					"Claim_main_2021_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_main/delta/delta2021/\")\r\n",
+					"\r\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 10
 			},
 			{
 				"cell_type": "code",
@@ -1538,12 +1549,20 @@
 						"transient": {
 							"deleting": false
 						}
-					}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
 				},
 				"source": [
+					"%%sql\r\n",
+					"--CREATE DATABASE IF NOT EXISTS fhir_data;\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_claim_main USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_main/delta/\";\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_claim_main_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_main/delta/delta2021/\";\r\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 11
 			},
 			{
 				"cell_type": "code",
@@ -1556,12 +1575,78 @@
 						"transient": {
 							"deleting": false
 						}
-					}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
 				},
 				"source": [
-					""
+					"%%sql\r\n",
+					"MERGE INTO fhir_data.delta_claim_main target\r\n",
+					"USING fhir_data.delta_claim_main_2021 source\r\n",
+					"ON\r\n",
+					"source.Claim_id = target.Claim_id                \r\n",
+					"AND source.resourceType = target.resourceType\r\n",
+					"AND source.status = target.status\r\n",
+					"AND source.billablePeriod_end = target.billablePeriod_end\r\n",
+					"AND source.billablePeriod_start = target.billablePeriod_start\r\n",
+					"AND source.created = target.created\r\n",
+					"AND source.patient_display = target.patient_display\r\n",
+					"AND source.patient_id_reference = target.patient_id_reference\r\n",
+					"AND source.prescription_reference = target.prescription_reference\r\n",
+					"AND source.provider_display = target.provider_display\r\n",
+					"AND source.provider_org_id_reference = target.provider_org_id_reference\r\n",
+					"AND source.total_currency = target.total_currency\r\n",
+					"AND source.total_value = target.total_value\r\n",
+					"AND source.use = target.use\r\n",
+					"WHEN MATCHED THEN\r\n",
+					"UPDATE SET \r\n",
+					"target.Claim_id = source.Claim_id                \r\n",
+					",target.resourceType = source.resourceType\r\n",
+					",target.status = source.status\r\n",
+					",target.billablePeriod_end = source.billablePeriod_end\r\n",
+					",target.billablePeriod_start = source.billablePeriod_start\r\n",
+					",target.created = source.created\r\n",
+					",target.patient_display = source.patient_display\r\n",
+					",target.patient_id_reference = source.patient_id_reference\r\n",
+					",target.prescription_reference = source.prescription_reference\r\n",
+					",target.provider_display = source.provider_display\r\n",
+					",target.provider_org_id_reference = source.provider_org_id_reference\r\n",
+					",target.total_currency = source.total_currency\r\n",
+					",target.total_value = source.total_value\r\n",
+					",target.use            = source.use\r\n",
+					"WHEN NOT MATCHED THEN\r\n",
+					"INSERT (target.Claim_id                  \r\n",
+					",target.resourceType              \r\n",
+					",target.status                    \r\n",
+					",target.billablePeriod_end        \r\n",
+					",target.billablePeriod_start      \r\n",
+					",target.created                   \r\n",
+					",target.patient_display           \r\n",
+					",target.patient_id_reference      \r\n",
+					",target.prescription_reference    \r\n",
+					",target.provider_display          \r\n",
+					",target.provider_org_id_reference \r\n",
+					",target.total_currency            \r\n",
+					",target.total_value               \r\n",
+					",target.use)\r\n",
+					"values (source.Claim_id                \r\n",
+					",source.resourceType\r\n",
+					",source.status\r\n",
+					",source.billablePeriod_end\r\n",
+					",source.billablePeriod_start\r\n",
+					",source.created\r\n",
+					",source.patient_display\r\n",
+					",source.patient_id_reference\r\n",
+					",source.prescription_reference\r\n",
+					",source.provider_display\r\n",
+					",source.provider_org_id_reference\r\n",
+					",source.total_currency\r\n",
+					",source.total_value\r\n",
+					",source.use)"
 				],
-				"execution_count": null
+				"execution_count": 12
 			},
 			{
 				"cell_type": "code",
