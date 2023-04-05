@@ -7,20 +7,20 @@
 		"nbformat": 4,
 		"nbformat_minor": 2,
 		"bigDataPool": {
-			"referenceName": "healthcare",
+			"referenceName": "fhirspark",
 			"type": "BigDataPoolReference"
 		},
 		"sessionProperties": {
-			"driverMemory": "112g",
-			"driverCores": 16,
-			"executorMemory": "112g",
-			"executorCores": 16,
+			"driverMemory": "56g",
+			"driverCores": 8,
+			"executorMemory": "56g",
+			"executorCores": 8,
 			"numExecutors": 4,
 			"conf": {
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "d16b778b-e000-45a1-a1fe-2c0d06eac3ec"
+				"spark.autotune.trackingId": "9fa4c712-c4e3-4b24-b0df-61aa0b245117"
 			}
 		},
 		"metadata": {
@@ -34,14 +34,21 @@
 				"name": "python"
 			},
 			"a365ComputeOptions": {
-				"id": "/subscriptions/7e416de3-c506-4776-8270-83fd73c6cc37/resourceGroups/syne2e/providers/Microsoft.Synapse/workspaces/health/bigDataPools/healthcare",
-				"name": "healthcare",
+				"id": "/subscriptions/1edafb84-8c33-41e9-aa81-994d9cdc325c/resourceGroups/amherold_hackathon/providers/Microsoft.Synapse/workspaces/ws-amherold-hackathon/bigDataPools/fhirspark",
+				"name": "fhirspark",
+				"type": "Spark",
+				"endpoint": "https://ws-amherold-hackathon.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/fhirspark",
 				"auth": {
 					"type": "AAD",
 					"authResource": "https://dev.azuresynapse.net"
-				}
+				},
+				"sparkVersion": "3.1",
+				"nodeCount": 5,
+				"cores": 8,
+				"memory": 56,
+				"automaticScaleJobs": false
 			},
-			"sessionKeepAliveTimeout": 30
+			"sessionKeepAliveTimeout": 60
 		},
 		"cells": [
 			{
@@ -61,19 +68,19 @@
 					]
 				},
 				"source": [
-					"StorageName = \"medicaldl\"\r\n",
-					"DatasetSize = \"1tb\""
+					"StorageName = \"amheroldhackathonstorage\"\r\n",
+					"DatasetSize = \"30tb\""
 				],
-				"execution_count": null
+				"execution_count": 2
 			},
 			{
 				"cell_type": "code",
 				"source": [
-					"curated_location = \"abfss://curated@\"+ StorageName +\".dfs.core.windows.net/fhir/\"+DatasetSize+\"/\"\r\n",
-					"processed_location = \"abfss://processed@\"+StorageName+\".dfs.core.windows.net/fhir/\"+DatasetSize+\"/\"\r\n",
+					"bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/historic_data/observation/year=*/*.json\"\r\n",
+					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/fhir/\"+DatasetSize+\"/\"\r\n",
 					"write_mode=\"overwrite\""
 				],
-				"execution_count": 1
+				"execution_count": 3
 			},
 			{
 				"cell_type": "code",
@@ -89,9 +96,9 @@
 					}
 				},
 				"source": [
-					"Observation_df=spark.read.parquet(processed_location+\"Observation/\")"
+					"Observation_df=spark.read.json(bronze_location)"
 				],
-				"execution_count": 2
+				"execution_count": 5
 			},
 			{
 				"cell_type": "code",
