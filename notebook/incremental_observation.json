@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "1e2bbc1d-a2d6-49e1-b891-5f8e8add8d35"
+				"spark.autotune.trackingId": "65e10b03-c371-4999-9aac-689aca76695c"
 			}
 		},
 		"metadata": {
@@ -113,6 +113,43 @@
 					"Observation_2021_df = spark.read.option(\"multiline\",\"false\").json(bronze_location)"
 				],
 				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"display(Observation_2021_df.limit(100))"
+				],
+				"execution_count": 43
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Observation_2021_df.printSchema()"
+				],
+				"execution_count": 4
 			},
 			{
 				"cell_type": "markdown",
@@ -712,7 +749,8 @@
 					},
 					"microsoft": {
 						"language": "sparksql"
-					}
+					},
+					"collapsed": false
 				},
 				"source": [
 					"%%sql\r\n",
@@ -721,7 +759,7 @@
 					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_component_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_component/delta/delta2021/\";\r\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 28
 			},
 			{
 				"cell_type": "code",
@@ -737,34 +775,55 @@
 					},
 					"microsoft": {
 						"language": "sparksql"
-					}
+					},
+					"collapsed": false
 				},
 				"source": [
 					"%%sql\r\n",
-					"MERGE INTO fhir_data.delta_observation_code target\r\n",
-					"USING fhir_data.delta_observation_code_2021 source\r\n",
+					"MERGE INTO fhir_data.delta_observation_component target\r\n",
+					"USING fhir_data.delta_observation_component_2021 source\r\n",
 					"ON \r\n",
-					"source.Observation_id =   target.Observation_id\r\n",
-					"AND source.category_code =    target.category_code\r\n",
-					"AND source.category_display = target.category_display\r\n",
-					"AND source.category_system =  target.category_system\r\n",
+					"source.Observation_id = target.id\r\n",
+					"AND source.component_code = target.component_code\r\n",
+					"AND source.component_display = target.component_display\r\n",
+					"AND source.component_system = target.component_system\r\n",
+					"AND source.component_text = target.component_text\r\n",
+					"AND source.component_valueQuantity_code = target.component_valueQuantity_code\r\n",
+					"AND source.component_valueQuantity_system = target.component_valueQuantity_system\r\n",
+					"AND source.component_valueQuantity_unit = target.component_valueQuantity_unit\r\n",
+					"AND source.component_valueQuantity_value = target.component_valueQuantity_value\r\n",
 					"WHEN MATCHED THEN\r\n",
 					"UPDATE SET\r\n",
-					"target.Observation_id = source.Observation_id\r\n",
-					",target.category_code = source.category_code\r\n",
-					",target.category_display = source.category_display\r\n",
-					",target.category_system = source.category_system\r\n",
+					"target.id = source.Observation_id\r\n",
+					",target.component_code = source.component_code\r\n",
+					",target.component_display = source.component_display\r\n",
+					",target.component_system = source.component_system\r\n",
+					",target.component_text = source.component_text\r\n",
+					",target.component_valueQuantity_code = source.component_valueQuantity_code\r\n",
+					",target.component_valueQuantity_system = source.component_valueQuantity_system\r\n",
+					",target.component_valueQuantity_unit = source.component_valueQuantity_unit\r\n",
+					",target.component_valueQuantity_value = source.component_valueQuantity_value\r\n",
 					"WHEN NOT MATCHED THEN\r\n",
-					"INSERT (target.Observation_id\r\n",
-					",target.category_code\r\n",
-					",target.category_display\r\n",
-					",target.category_system)\r\n",
+					"INSERT (target.id\r\n",
+					",target.component_code\r\n",
+					",target.component_display\r\n",
+					",target.component_system\r\n",
+					",target.component_text\r\n",
+					",target.component_valueQuantity_code\r\n",
+					",target.component_valueQuantity_system\r\n",
+					",target.component_valueQuantity_unit\r\n",
+					",target.component_valueQuantity_value)\r\n",
 					"values (source.Observation_id\r\n",
-					",source.category_code\r\n",
-					",source.category_display\r\n",
-					",source.category_system)"
+					",source.component_code\r\n",
+					",source.component_display\r\n",
+					",source.component_system\r\n",
+					",source.component_text\r\n",
+					",source.component_valueQuantity_code\r\n",
+					",source.component_valueQuantity_system\r\n",
+					",source.component_valueQuantity_unit\r\n",
+					",source.component_valueQuantity_value)"
 				],
-				"execution_count": null
+				"execution_count": 29
 			},
 			{
 				"cell_type": "markdown",
@@ -795,10 +854,10 @@
 				"source": [
 					"#bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/historic_data/claim/year=*/*.json\"\r\n",
 					"bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/incremental_data/observation/year=2021/month=*/day=*/*.json\"\r\n",
-					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Observation_component/\"\r\n",
+					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Observation_valueCodeableConcept/\"\r\n",
 					"write_mode=\"overwrite\""
 				],
-				"execution_count": null
+				"execution_count": 32
 			},
 			{
 				"cell_type": "code",
@@ -822,14 +881,14 @@
 					"\r\n",
 					"\r\n",
 					"#%%pyspark\r\n",
-					"observation_component_df = spark.read.option(\"multiline\",\"false\").parquet(silver_location)\r\n",
+					"observation_valueCodeableConcept_df = spark.read.option(\"multiline\",\"false\").parquet(silver_location)\r\n",
 					"\r\n",
 					"\r\n",
 					"#claim_insurance_df = spark.read.schema(observation_procedure_Schema).parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_insurance/*.parquet\")\r\n",
 					"\r\n",
-					"observation_component_df.printSchema()"
+					"observation_valueCodeableConcept_df.printSchema()"
 				],
-				"execution_count": null
+				"execution_count": 33
 			},
 			{
 				"cell_type": "code",
@@ -846,20 +905,13 @@
 				},
 				"source": [
 					"from pyspark.sql.functions import explode\r\n",
-					"from pyspark.sql.functions import explode_outer\r\n",
 					"\r\n",
-					"Observation_component_explode_df = Observation_2021_df.select(\"id\",explode(Observation_2021_df.component))\r\n",
+					"Observation_valueCodeableConcept_explode_df = Observation_2021_df.select(\"id\",explode(Observation_2021_df.valueCodeableConcept.coding),\"valueCodeableConcept.text\").toDF(*(\"Observation_id\",\"coding\",\"valueCodeableConcept_text\"))\r\n",
 					"\r\n",
-					"Observation_component_explode2_df = Observation_component_explode_df.select(\"id\",explode_outer(Observation_component_explode_df.col.code.coding),\"col.code.text\",\r\n",
-					"    \"col.valueQuantity.code\",\"col.valueQuantity.system\",\"col.valueQuantity.unit\",\"col.valueQuantity.value\").toDF(*(\"Observation_id\",\"component_code\",\"component_text\",\r\n",
-					"    \"component_valueQuantity_code\",\"component_valueQuantity_system\",\"component_valueQuantity_unit\",\"component_valueQuantity_value\"))   \r\n",
-					"\r\n",
-					"Observation_component_2021_df = Observation_component_explode2_df.select(\"Observation_id\",\"component_code.*\",\"component_text\",\r\n",
-					"    \"component_valueQuantity_code\",\"component_valueQuantity_system\",\"component_valueQuantity_unit\",\"component_valueQuantity_value\").toDF(*(\"Observation_id\",\"component_code\",\r\n",
-					"    \"component_display\",\"component_system\",\"component_text\",\r\n",
-					"    \"component_valueQuantity_code\",\"component_valueQuantity_system\",\"component_valueQuantity_unit\",\"component_valueQuantity_value\"))"
+					"Observation_valueCodeableConcept_2021_df = Observation_valueCodeableConcept_explode_df.select(\"Observation_id\",\"coding.*\",\"valueCodeableConcept_text\").toDF(*(\"Observation_id\",\r\n",
+					"    \"valueCodeableConcept_code\", \"valueCodeableConcept_display\",\"valueCodeableConcept_system\",\"valueCodeableConcept_text\"))"
 				],
-				"execution_count": null
+				"execution_count": 34
 			},
 			{
 				"cell_type": "code",
@@ -875,9 +927,9 @@
 					}
 				},
 				"source": [
-					"Observation_component_2021_df.printSchema()"
+					"Observation_valueCodeableConcept_2021_df.printSchema()"
 				],
-				"execution_count": null
+				"execution_count": 35
 			},
 			{
 				"cell_type": "code",
@@ -896,11 +948,240 @@
 					"#-------------create the delta with the existing records------------------\r\n",
 					"from delta.tables import *\r\n",
 					"\r\n",
-					"observation_component_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_component/delta/\")\r\n",
+					"observation_valueCodeableConcept_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_valueCodeableConcept/delta/\")\r\n",
 					"\r\n",
-					"Observation_component_2021_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_component/delta/delta2021/\")"
+					"Observation_valueCodeableConcept_2021_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_valueCodeableConcept/delta/delta2021/\")"
 				],
-				"execution_count": null
+				"execution_count": 36
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"--CREATE DATABASE IF NOT EXISTS fhir_data;\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_valueCodeableConcept USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_valueCodeableConcept/delta/\";\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_valueCodeableConcept_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_valueCodeableConcept/delta/delta2021/\";\r\n",
+					""
+				],
+				"execution_count": 37
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"MERGE INTO fhir_data.delta_observation_valueCodeableConcept target\r\n",
+					"USING fhir_data.delta_observation_valueCodeableConcept_2021 source\r\n",
+					"ON \r\n",
+					"source.Observation_id = target.id\r\n",
+					"AND source.valueCodeableConcept_code = target.valueCodeableConcept_code\r\n",
+					"AND source.valueCodeableConcept_display = target.valueCodeableConcept_display\r\n",
+					"AND source.valueCodeableConcept_system = target.valueCodeableConcept_system\r\n",
+					"AND source.valueCodeableConcept_text = target.valueCodeableConcept_text\r\n",
+					"WHEN MATCHED THEN \r\n",
+					"UPDATE SET\r\n",
+					"target.id = source.Observation_id\r\n",
+					",target.valueCodeableConcept_code = source.valueCodeableConcept_code\r\n",
+					",target.valueCodeableConcept_display = source.valueCodeableConcept_display\r\n",
+					",target.valueCodeableConcept_system = source.valueCodeableConcept_system\r\n",
+					",target.valueCodeableConcept_text = source.valueCodeableConcept_text\r\n",
+					"WHEN NOT MATCHED THEN\r\n",
+					"INSERT (target.id\r\n",
+					",target.valueCodeableConcept_code\r\n",
+					",target.valueCodeableConcept_display\r\n",
+					",target.valueCodeableConcept_system\r\n",
+					",target.valueCodeableConcept_text)\r\n",
+					"values (source.Observation_id\r\n",
+					",source.valueCodeableConcept_code\r\n",
+					",source.valueCodeableConcept_display\r\n",
+					",source.valueCodeableConcept_system\r\n",
+					",source.valueCodeableConcept_text)"
+				],
+				"execution_count": 38
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"###### Observation main"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/historic_data/claim/year=*/*.json\"\r\n",
+					"bronze_location = \"abfss://bronze@\"+ StorageName +\".dfs.core.windows.net/incremental_data/observation/year=2021/month=*/day=*/*.json\"\r\n",
+					"silver_location = \"abfss://silver@\"+StorageName+\".dfs.core.windows.net/Observation_main/\"\r\n",
+					"write_mode=\"overwrite\""
+				],
+				"execution_count": 5
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"#claim_insurance_Schema = spark.read.parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_procedure/part-00000-61cead24-54ee-47fd-8664-67c8b05c675e-c000.snappy.parquet\").schema\r\n",
+					"\r\n",
+					"\r\n",
+					"#%%pyspark\r\n",
+					"observation_main_df = spark.read.option(\"multiline\",\"false\").parquet(silver_location)\r\n",
+					"\r\n",
+					"\r\n",
+					"#claim_insurance_df = spark.read.schema(observation_procedure_Schema).parquet(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Claim_insurance/*.parquet\")\r\n",
+					"\r\n",
+					"observation_main_df.printSchema()"
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#-----------rename columns------------------\r\n",
+					"from pyspark.sql.functions import regexp_replace\r\n",
+					"\r\n",
+					"Observation_2021_df=Observation_2021_df.withColumn(\"subject\",regexp_replace(\"subject.reference\",\"Patient/\",\"\")).withColumn(\"encounter\",regexp_replace(\"encounter.reference\",\"Encounter/\",\"\"))\r\n",
+					"Observation_2021_df=Observation_2021_df.withColumnRenamed(\"id\",\"Observation_id\")\r\n",
+					"Observation_2021_df=Observation_2021_df.withColumnRenamed(\"subject\",\"patient_id_reference\")\r\n",
+					"Observation_2021_df=Observation_2021_df.withColumnRenamed(\"encounter\",\"encounter_id_reference\")"
+				],
+				"execution_count": 17
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": true
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"\r\n",
+					"Observation_main_2021_df = Observation_2021_df.select(\r\n",
+					"    \"Observation_id\",\"resourceType\",\"issued\",\"status\", \"patient_id_reference\",\"encounter_id_reference\",\"effectiveDateTime\",\r\n",
+					"    \"valueQuantity.code\",\"valueQuantity.system\",\"valueQuantity.unit\",\"valueQuantity.value\",\"valueString\").toDF(*(\r\n",
+					"    \"Observation_id\",\"resourceType\",\"issued\",\"status\",\"patient_id_reference\",\"encounter_id_reference\",\"effectiveDateTime\",\r\n",
+					"    \"valueQuantity_code\",\"valueQuantity_system\",\r\n",
+					"    \"valueQuantity_unit\",\"valueQuantity_value\",\"valueString\"))"
+				],
+				"execution_count": 18
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Observation_main_2021_df.printSchema()"
+				],
+				"execution_count": 19
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#-------------create the delta with the existing records------------------\r\n",
+					"from delta.tables import *\r\n",
+					"\r\n",
+					"observation_main_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_main/delta/\")\r\n",
+					"\r\n",
+					"Observation_main_2021_df.write.mode(\"overwrite\").format(\"delta\").save(\"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_main/delta/delta2021/\")"
+				],
+				"execution_count": 20
 			},
 			{
 				"cell_type": "code",
@@ -920,9 +1201,9 @@
 				},
 				"source": [
 					"%%sql\r\n",
-					"--CREATE DATABASE IF NOT EXISTS fhir_data;\r\n",
-					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_component USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_component/delta/\";\r\n",
-					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_component_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_component/delta/delta2021/\";\r\n",
+					"--CREATE DATABASE IF NOT EXISTS fhir_data; \r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_main USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_main/delta/\";\r\n",
+					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_main_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_main/delta/delta2021/\";\r\n",
 					""
 				],
 				"execution_count": null
@@ -944,29 +1225,63 @@
 					}
 				},
 				"source": [
+					"\r\n",
 					"%%sql\r\n",
-					"MERGE INTO fhir_data.delta_observation_code target\r\n",
-					"USING fhir_data.delta_observation_code_2021 source\r\n",
+					"MERGE INTO fhir_data.delta_observation_main target\r\n",
+					"USING fhir_data.delta_observation_main_2021 source\r\n",
 					"ON \r\n",
-					"source.Observation_id =   target.Observation_id\r\n",
-					"AND source.category_code =    target.category_code\r\n",
-					"AND source.category_display = target.category_display\r\n",
-					"AND source.category_system =  target.category_system\r\n",
+					"source.Observation_id = target.Observation_id          \r\n",
+					"AND source.resourceType = target.resourceType         \r\n",
+					"AND source.issued = target.issued                \r\n",
+					"AND source.status = target.status                \r\n",
+					"AND source.patient_id_reference = target.patient_id_reference  \r\n",
+					"AND source.encounter_id_reference = target.patient_id_reference  \r\n",
+					"AND source.effectiveDateTime = target.effectiveDateTime      \r\n",
+					"AND source.valueQuantity_code = target.valueQuantity_code        \r\n",
+					"AND source.valueQuantity_system = target.valueQuantity_system   \r\n",
+					"AND source.valueQuantity_unit = target.valueQuantity_unit   \r\n",
+					"AND source.valueQuantity_value = target.valueQuantity_value    \r\n",
+					"AND source.valueString = target.valueString   \r\n",
 					"WHEN MATCHED THEN \r\n",
 					"UPDATE SET\r\n",
-					"target.Observation_id = source.Observation_id\r\n",
-					",target.category_code = source.category_code\r\n",
-					",target.category_display = source.category_display\r\n",
-					",target.category_system = source.category_system\r\n",
+					"target.Observation_id  = source.Observation_id          \r\n",
+					",target.resourceType = source.resourceType         \r\n",
+					",target.issued = source.issued                \r\n",
+					",target.status = source.status                \r\n",
+					",target.patient_id_reference  = source.patient_id_reference  \r\n",
+					",target.encounter_id_reference = source.patient_id_reference  \r\n",
+					",target.effectiveDateTime  = source.effectiveDateTime      \r\n",
+					",target.valueQuantity_code = source.valueQuantity_code        \r\n",
+					",target.valueQuantity_system = source.valueQuantity_system   \r\n",
+					",target.valueQuantity_unit   =source.valueQuantity_unit   \r\n",
+					",target.valueQuantity_value = source.valueQuantity_value    \r\n",
+					",target.valueString  = source.valueString \r\n",
 					"WHEN NOT MATCHED THEN\r\n",
-					"INSERT (target.Observation_id\r\n",
-					",target.category_code\r\n",
-					",target.category_display\r\n",
-					",target.category_system)\r\n",
-					"values (source.Observation_id\r\n",
-					",source.category_code\r\n",
-					",source.category_display\r\n",
-					",source.category_system)"
+					"INSERT (target.Observation_id        \r\n",
+					",target.resourceType         \r\n",
+					",target.issued                \r\n",
+					",target.status                \r\n",
+					",target.patient_id_reference  \r\n",
+					",target.encounter_id_reference\r\n",
+					",target.effectiveDateTime     \r\n",
+					",target.valueQuantity_code    \r\n",
+					",target.valueQuantity_system  \r\n",
+					",target.valueQuantity_unit    \r\n",
+					",target.valueQuantity_value   \r\n",
+					",target.valueString    \r\n",
+					")\r\n",
+					"values (source.Observation_id        \r\n",
+					",source.resourceType         \r\n",
+					",source.issued                \r\n",
+					",source.status                \r\n",
+					",source.patient_id_reference  \r\n",
+					",source.encounter_id_reference\r\n",
+					",source.effectiveDateTime     \r\n",
+					",source.valueQuantity_code    \r\n",
+					",source.valueQuantity_system  \r\n",
+					",source.valueQuantity_unit    \r\n",
+					",source.valueQuantity_value   \r\n",
+					",source.valueString)"
 				],
 				"execution_count": null
 			}
