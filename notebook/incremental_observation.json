@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "65e10b03-c371-4999-9aac-689aca76695c"
+				"spark.autotune.trackingId": "5ca5314c-7f97-4522-b4f2-738a44179f53"
 			}
 		},
 		"metadata": {
@@ -1197,7 +1197,8 @@
 					},
 					"microsoft": {
 						"language": "sparksql"
-					}
+					},
+					"collapsed": false
 				},
 				"source": [
 					"%%sql\r\n",
@@ -1206,7 +1207,7 @@
 					"CREATE TABLE IF NOT EXISTS fhir_data.delta_observation_main_2021 USING DELTA LOCATION \"abfss://silver@amheroldhackathonstorage.dfs.core.windows.net/Observation_main/delta/delta2021/\";\r\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 21
 			},
 			{
 				"cell_type": "code",
@@ -1222,7 +1223,8 @@
 					},
 					"microsoft": {
 						"language": "sparksql"
-					}
+					},
+					"collapsed": false
 				},
 				"source": [
 					"\r\n",
@@ -1283,7 +1285,7 @@
 					",source.valueQuantity_value   \r\n",
 					",source.valueString)"
 				],
-				"execution_count": null
+				"execution_count": 22
 			}
 		]
 	}
