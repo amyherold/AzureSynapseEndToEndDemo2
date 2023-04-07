@@ -1,0 +1,17 @@
+{
+	"name": "create tables serverless observation",
+	"properties": {
+		"content": {
+			"query": "CREATE EXTERNAL TABLE ext.Observation_main (\n\t[Observation_id] nvarchar(4000),\n\t[resourceType] nvarchar(4000),\n\t[issued] nvarchar(4000),\n\t[status] nvarchar(4000),\n\t[patient_id_reference] nvarchar(4000),\n\t[encounter_id_reference] nvarchar(4000),\n\t[effectiveDateTime] nvarchar(4000),\n\t[valueQuantity_code] nvarchar(4000),\n\t[valueQuantity_system] nvarchar(4000),\n\t[valueQuantity_unit] nvarchar(4000),\n\t[valueQuantity_value] float,\n\t[valueString] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = 'Observation_main',\n\tDATA_SOURCE = SilverStorage,\n\tFILE_FORMAT = ParquetFile\n\t)\nGO\n\n\nCREATE EXTERNAL TABLE ext.Observation_component (\n\t[Observation_id] nvarchar(4000),\n\t[component_code] nvarchar(4000),\n\t[component_display] nvarchar(4000),\n\t[component_system] nvarchar(4000),\n\t[component_text] nvarchar(4000),\n\t[component_valueQuantity_code] nvarchar(4000),\n\t[component_valueQuantity_system] nvarchar(4000),\n\t[component_valueQuantity_unit] nvarchar(4000),\n\t[component_valueQuantity_value] float\n\t)\n\tWITH (\n\tLOCATION = 'Observation_component',\n\tDATA_SOURCE = SilverStorage,\n\tFILE_FORMAT = ParquetFile\n\t)\nGO\n\n\n\nCREATE EXTERNAL TABLE ext.Observation_valueCodeableConcept (\n\t[Observation_id] nvarchar(4000),\n\t[valueCodeableConcept_code] nvarchar(4000),\n\t[valueCodeableConcept_display] nvarchar(4000),\n\t[valueCodeableConcept_system] nvarchar(4000),\n\t[valueCodeableConcept_text] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = '/Observation_valueCodeableConcept/',\n\tDATA_SOURCE = SilverStorage,\n\tFILE_FORMAT = ParquetFile\n\t)\nGO\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "FHIR_analysis",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
