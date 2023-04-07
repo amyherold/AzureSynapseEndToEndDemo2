@@ -1,0 +1,17 @@
+{
+	"name": "create tables serverless claim",
+	"properties": {
+		"content": {
+			"query": "CREATE EXTERNAL TABLE ext.Claim_insurance (\n\t[Claim_id] nvarchar(4000),\n\t[insurance_coverage_display] nvarchar(4000),\n\t[insurance_focal] bit,\n\t[insurance_sequence] bigint\n\t)\n\tWITH (\n\tLOCATION = 'Claim_insurance/**',\n\tDATA_SOURCE = [silver_amheroldhackathonstorage_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseParquetFormat]\n\t)\nGO\n\n\n\n\nCREATE EXTERNAL TABLE ext.Claim_main (\n\t[Claim_id] nvarchar(4000),\n\t[resourceType] nvarchar(4000),\n\t[status] nvarchar(4000),\n\t[billablePeriod_end] nvarchar(4000),\n\t[billablePeriod_start] nvarchar(4000),\n\t[created] nvarchar(4000),\n\t[patient_display] nvarchar(4000),\n\t[patient_id_reference] nvarchar(4000),\n\t[prescription_reference] nvarchar(4000),\n\t[provider_display] nvarchar(4000),\n\t[provider_org_id_reference] nvarchar(4000),\n\t[total_currency] nvarchar(4000),\n\t[total_value] float,\n\t[use] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = 'Claim_main/**',\n\tDATA_SOURCE = [silver_amheroldhackathonstorage_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseParquetFormat]\n\t)\nGO\n\n\n\n\nCREATE EXTERNAL TABLE ext.Claim_procedure (\n\t[Claim_id] nvarchar(4000),\n\t[procedure_reference] nvarchar(4000),\n\t[procedure_sequence] bigint\n\t)\n\tWITH (\n\tLOCATION = 'Claim_procedure/**',\n\tDATA_SOURCE = [silver_amheroldhackathonstorage_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseParquetFormat]\n\t)\nGO\n\n\nCREATE EXTERNAL TABLE ext.Claim_diagnosis (\n\t[Claim_id] nvarchar(4000),\n\t[diagnosis_reference] nvarchar(4000),\n\t[diagnosis_sequence] bigint\n\t)\n\tWITH (\n\tLOCATION = 'Claim_diagnosis/**',\n\tDATA_SOURCE = [silver_amheroldhackathonstorage_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseParquetFormat]\n\t)\nGO\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "FHIR_analysis",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
