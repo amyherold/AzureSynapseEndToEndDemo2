@@ -1,0 +1,17 @@
+{
+	"name": "query1",
+	"properties": {
+		"content": {
+			"query": "SELECT TOP (100) [birthDate]\n,[deceasedDateTime]\n,[gender]\n,[Patient_id]\n,[multipleBirthBoolean]\n,[multipleBirthInteger]\n,[resourceType]\n,[text_div]\n,[text_status]\n FROM [ext].[Patient_main]\nwhere gender = 'male'\nand birthDate BETWEEN \n\n select patient_id as patient_id, count(*) as count_claim\nfrom claims c\nleft join patient p on c.patient_id = p.id\nwhere p.gender = 'Male' and (p.dob > 18 and p.dob<25) and c.year > 2020\ngroup by p.patient_id\n\n\nSELECT top 100 DATE_FORMAT(FROM_DAYS(DATEDIFF(GETDATE(), birthDate)), '%Y') + 0 AS age\nFROM [ext].[Patient_main]\n\n\nSELECT top 100 birthDate,DATEDIFF(hour,birthDate,GETDATE())/8766.0 AS AgeYearsDecimal\n    ,CONVERT(int,ROUND(DATEDIFF(hour,birthDate,GETDATE())/8766.0,0)) AS AgeYearsIntRound\n    ,DATEDIFF(hour,birthDate,GETDATE())/8766 AS AgeYearsIntTrunc\nFROM [ext].[Patient_main]\n\nwith x as (\nSELECT birthDate\n,CONVERT(int,ROUND(DATEDIFF(hour,birthDate,GETDATE())/8766.0,0)) AS AgeYearsIntRound\nFROM [ext].[Patient_main]\n)\nselect *\nfrom x\nwhere AgeYearsIntRound BETWEEN 18 and 25\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "FHIR_analysis",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
