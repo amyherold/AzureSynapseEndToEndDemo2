@@ -1,0 +1,17 @@
+{
+	"name": "query2",
+	"properties": {
+		"content": {
+			"query": "SELECT count([Claim_id]) count_claims\n,YEAR([created]) claim_year\n,[patient_display]\n,[patient_id_reference]\n FROM [ext].[Claim_main]\n group by YEAR([created]) \n,[patient_display]\n,[patient_id_reference]\n\nwith claims as (\nSELECT [Claim_id]\n,[created]\n,[patient_id_reference]\n FROM [ext].[Claim_main]\n where YEAR([created]) > 2020\n)\n\n\nSELECT count([Claim_id]) count_claims\n,YEAR([created]) claim_year\n,[patient_display]\n,[patient_id_reference]\n FROM [ext].[Claim_main]\n group by YEAR([created]) \n,[patient_display]\n,[patient_id_reference]",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "FHIR_analysis",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
