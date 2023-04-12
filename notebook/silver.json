@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "4",
 				"spark.dynamicAllocation.maxExecutors": "4",
-				"spark.autotune.trackingId": "53786671-65ef-4926-ba47-fd6cb65e11d4"
+				"spark.autotune.trackingId": "a4f1760f-99ac-4450-bcc4-65e8ba4f3854"
 			}
 		},
 		"metadata": {
@@ -54,7 +54,7 @@
 					"StorageName = \"amheroldhackathonstorage\"\r\n",
 					"DatasetSize = \"30tb\""
 				],
-				"execution_count": 41
+				"execution_count": 49
 			},
 			{
 				"cell_type": "code",
@@ -75,7 +75,7 @@
 					"silver_location = \"abfss://silver@\" + StorageName + \".dfs.core.windows.net/\"\r\n",
 					"write_mode=\"overwrite\""
 				],
-				"execution_count": 42
+				"execution_count": 50
 			},
 			{
 				"cell_type": "markdown",
@@ -106,7 +106,7 @@
 				"source": [
 					"Patient_df=spark.read.json(bronze_location)"
 				],
-				"execution_count": 43
+				"execution_count": 51
 			},
 			{
 				"cell_type": "code",
@@ -320,7 +320,7 @@
 					"\r\n",
 					"Patient_extension_df.printSchema()"
 				],
-				"execution_count": 73
+				"execution_count": 108
 			},
 			{
 				"cell_type": "code",
@@ -339,7 +339,7 @@
 				"source": [
 					"display(Patient_extension_df.limit(100))"
 				],
-				"execution_count": 74
+				"execution_count": 109
 			},
 			{
 				"cell_type": "code",
@@ -357,7 +357,7 @@
 				"source": [
 					"Patient_extension_df.write.mode(write_mode).parquet(silver_location+\"Patient_extension/\") "
 				],
-				"execution_count": 75
+				"execution_count": 110
 			},
 			{
 				"cell_type": "markdown",
@@ -541,6 +541,168 @@
 					}
 				},
 				"source": [
+					"###### Patient name"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import explode_outer\r\n",
+					"from pyspark.sql.functions import flatten\r\n",
+					"\r\n",
+					"Patient_explode_df = Patient_df.select(\"id\",explode(Patient_df.name)).toDF(\"id\",\"name\")\r\n",
+					"\r\n",
+					"Patient_explode2_df = Patient_explode_df.select(\"id\",\"name.family\",explode_outer(Patient_explode_df.name.given),\"name.prefix\",\"name.suffix\",\"name.use\").toDF(\"id\",\"name_family\",\"name_given\",\"name_prefix\",\"name_suffix\",\"name_use\")\r\n",
+					"\r\n",
+					"Patient_explode3_df = Patient_explode2_df.select(\"id\",\"name_family\",\"name_given\",explode(Patient_explode2_df.name_prefix),\"name_suffix\",\"name_use\").toDF(*(\"id\",\"name_family\",\"name_given\",\"name_prefix\",\"name_suffix\",\"name_use\"))\r\n",
+					"\r\n",
+					"Patient_explode4_df = Patient_explode3_df.select(\"id\",\"name_family\",\"name_given\",\"name_prefix\",explode(Patient_explode3_df.name_suffix),\"name_use\").toDF(*(\"Patient_id\",\"name_family\",\"name_given\",\"name_prefix\",\"name_suffix\",\"name_use\"))\r\n",
+					"\r\n",
+					"\r\n",
+					"Patient_explode4_df.printSchema()\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					"\r\n",
+					""
+				],
+				"execution_count": 89
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"display(Patient_explode4_df.limit(100))"
+				],
+				"execution_count": 90
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Patient_explode4_df.write.mode(write_mode).parquet(silver_location+\"Patient_name/\") "
+				],
+				"execution_count": 91
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"###### Patient telecom"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import explode\r\n",
+					"from pyspark.sql.functions import explode_outer\r\n",
+					"\r\n",
+					"Patient_explode_df = Patient_df.select(\"id\",explode(Patient_df.telecom)).toDF(\"id\",\"telecom\")\r\n",
+					"\r\n",
+					"Patient_explode2_df = Patient_explode_df.select(\"id\",\"telecom.system\",\"telecom.use\",\"telecom.value\").toDF(\"Patient_id\",\"telecom_system\",\"telecom_use\",\"telecom_value\")\r\n",
+					"\r\n",
+					"\r\n",
+					"Patient_explode2_df.printSchema()"
+				],
+				"execution_count": 92
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"display(Patient_explode2_df.limit(100))"
+				],
+				"execution_count": 94
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Patient_explode2_df.write.mode(write_mode).parquet(silver_location+\"Patient_telecom/\") "
+				],
+				"execution_count": 95
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
 					"###### Patient main"
 				]
 			},
@@ -559,21 +721,15 @@
 				},
 				"source": [
 					"\r\n",
-					"\r\n",
-					"\r\n",
 					"from pyspark.sql.functions import explode\r\n",
 					"from pyspark.sql.functions import explode_outer\r\n",
 					"\r\n",
-					"Patient_explode_df = Patient_df.select(\"id\",explode(Patient_df.name)).toDF(*(\"id\",\"name\"))\r\n",
-					"\r\n",
+					"Patient_explode_df = Patient_df.select(\"birthDate\",\"deceasedDateTime\",\"gender\",\"id\",\"multipleBirthBoolean\",\"multipleBirthInteger\",\"resourceType\",\"text.div\",\"text.status\").toDF(\"birthDate\",\"deceasedDateTime\",\"gender\",\"Patient_id\",\"multipleBirthBoolean\",\"multipleBirthInteger\",\"resourceType\",\"text_div\",\"text_status\")\r\n",
 					"\r\n",
 					"Patient_explode_df.printSchema() \r\n",
-					"\r\n",
-					"Patient_name_df = Patient_explode_df.select(\"id\",\"name.family\",\"name.given\",\"name.prefix\",\"name.suffix\",\"name.use\").toDF(\"id\",\"name_family\",\"name_given\",\"name_prefix\",\"name_suffix\",\"name_use\")\r\n",
-					"Patient_name_df.printSchema()\r\n",
 					""
 				],
-				"execution_count": 47
+				"execution_count": 97
 			},
 			{
 				"cell_type": "code",
@@ -590,9 +746,27 @@
 					"collapsed": false
 				},
 				"source": [
-					"display(Patient_name_df.limit(100))"
+					"display(Patient_explode_df.limit(100))"
 				],
-				"execution_count": 48
+				"execution_count": 98
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"Patient_explode_df.write.mode(write_mode).parquet(silver_location+\"Patient_main/\") "
+				],
+				"execution_count": 99
 			},
 			{
 				"cell_type": "code",
@@ -611,18 +785,35 @@
 					"from pyspark.sql.functions import explode\r\n",
 					"from pyspark.sql.functions import explode_outer\r\n",
 					"\r\n",
-					"Patient_main_explode_df = Patient_df.select(\"id\",explode(Patient_df.maritalStatus.coding),\"maritalStatus.text\").toDF(\"id\",\"maritalStatus.coding\",\"maritalStatus_text\")\r\n",
-					"Patient_main_explode_df.printSchema()\r\n",
+					"Patient_main_explode_df = Patient_df.select(\"id\",explode(Patient_df.maritalStatus.coding),\"maritalStatus.text\").toDF(\"id\",\"maritalStatus_coding\",\"maritalStatus_text\")\r\n",
+					"#Patient_main_explode_df.printSchema()\r\n",
 					"\r\n",
-					"Patient_main_explode2_df = Patient_df.select(\"id\",explode(Patient_df.name)).toDF(\"id\",\"name\")\r\n",
-					"Patient_main_explode2_df.printSchema()\r\n",
+					"Patient_marital_explode_df = Patient_main_explode_df.select(\"id\",\"maritalStatus_coding.code\",\"maritalStatus_coding.display\",\"maritalStatus_coding.system\",\"maritalStatus_text\").toDF(\"Patient_id\",\"maritalStatus_coding_code\",\"maritalStatus_coding_display\",\"maritalStatus_coding_system\",\"maritalStatus_text\")\r\n",
+					"Patient_marital_explode_df.printSchema()\r\n",
 					"\r\n",
 					"\r\n",
-					"\r\n",
-					"Patient_main_df = (Patient_main_explode_df.select(\"id\",\"maritalStatus_coding.code\",\"maritalStatus_coding.display\",\"maritalStatus_coding.system\",\"maritalStatus_text\"),Patient_main_explode2_df.select(\"id\",\"name.family\",\"name.given\",\"name.suffix\",\"name.use\")).toDF(\"id\",\"maritalStatus_coding_code\",\"maritalStatus_coding_display\",\"maritalStatus_coding_system\",\"maritalStatus_text\",\"id2\",\"name_family\",\"name_given\",\"name_suffix\",\"name_use\")\r\n",
 					""
 				],
-				"execution_count": 44
+				"execution_count": 105
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"display(Patient_marital_explode_df.limit(100))"
+				],
+				"execution_count": 106
 			},
 			{
 				"cell_type": "code",
@@ -638,9 +829,9 @@
 					}
 				},
 				"source": [
-					"Patient_main_explode2_df.printSchema()"
+					"Patient_marital_explode_df.write.mode(write_mode).parquet(silver_location+\"Patient_maritalStatus/\") "
 				],
-				"execution_count": null
+				"execution_count": 107
 			},
 			{
 				"cell_type": "code",
